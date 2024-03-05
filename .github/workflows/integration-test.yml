@@ -1,0 +1,222 @@
+name: Integration test for Rust
+
+on:
+  push:
+    branches: main
+    paths: ['deny.toml', 'src/**', 'benches/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/integration-test.yml']
+  pull_request:
+    branches: main
+    paths: ['deny.toml', 'src/**', 'benches/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/integration-test.yml']
+
+env:
+    MOLD_VERSION: 2.4.0
+    CARGO_TERM_COLOR: always
+
+jobs:
+
+  cargo_check:
+      name: Cargo Check
+      strategy:
+        fail-fast: false
+        matrix:
+          os: [ubuntu-latest, windows-latest, macos-latest]
+      runs-on: ${{ matrix.os }}
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+        - name: Install Rust nightly
+          uses: dtolnay/rust-toolchain@master
+          id: rust-toolchain
+          with:
+            toolchain: nightly
+        - name: Install cargo-make
+          uses: taiki-e/install-action@cargo-make
+        - name: Cache Cargo
+          uses: Swatinem/rust-cache@v2
+        - name: Run cargo make check
+          run: cargo make check
+          env:
+            RUST_BACKTRACE: full
+
+  cargo_fmt:
+      name: Cargo Format
+      needs: [cargo_check]
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+        - name: Install Rust nightly
+          uses: dtolnay/rust-toolchain@master
+          id: rust-toolchain
+          with:
+            toolchain: nightly
+            components: rustfmt
+        - name: Cache Cargo
+          uses: Swatinem/rust-cache@v2
+        - name: Check formatting
+          run: cargo fmt -- --check
+        - name: Check documentation
+          run: cargo doc --no-deps --all-features
+        - name: Check typos
+          uses: crate-ci/typos@master
+        - name: Lint dependencies
+          uses: EmbarkStudios/cargo-deny-action@v1
+
+  cargo_clippy:
+      name: Cargo Clippy
+      needs: [cargo_check]
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - name: Install Rust nightly
+          uses: dtolnay/rust-toolchain@master
+          id: rust-toolchain
+          with:
+            toolchain: nightly
+        - name: Cache Cargo
+          uses: Swatinem/rust-cache@v2
+        - uses: rui314/setup-mold@v1
+          with:
+            mold-version: ${{ env.MOLD_VERSION }}
+        - name: Add clippy
+          run: rustup component add clippy
+        - name: Run clippy
+          run: cargo clippy
+
+  cargo_test:
+        name: Cargo Test
+        needs: [cargo_fmt , cargo_clippy]
+        strategy:
+          fail-fast: false
+          matrix:
+            os: [ubuntu-latest, windows-latest, macos-latest]
+        runs-on: ${{ matrix.os }}
+        steps:
+        - uses: actions/checkout@v4
+        - name: Install Rust nightly
+          uses: dtolnay/rust-toolchain@master
+          id: rust-toolchain
+          with:
+            toolchain: nightly
+        - name: Cache Cargo
+          uses: Swatinem/rust-cache@v2
+        - uses: rui314/setup-mold@v1
+          with:
+            mold-version: ${{ env.MOLD_VERSION }}
+        - name: cargo test
+          run: cargo test
+
+  cargo_mutants: # https://mutants.rs
+      name: Cargo Mutants
+      needs: [cargo_test]
+      runs-on: ubuntu-latest
+      permissions:
+        pull-requests: write
+      continue-on-error: true
+      steps:
+        - uses: actions/checkout@v4
+        - name: Install Rust nightly
+          uses: dtolnay/rust-toolchain@master
+          id: rust-toolchain
+          with:
+            toolchain: nightly
+        - name: Cache Cargo
+          uses: Swatinem/rust-cache@v2
+        - uses: taiki-e/install-action@v2
+          name: Install cargo-mutants using install-action
+          with:
+            tool: cargo-mutants
+        - name: Run mutant tests
+          run: cargo mutants -vV --in-place
+          continue-on-error: true
+        - uses: mshick/add-pr-comment@v2
+          if: always()
+          with:
+            message-path: mutants.out/missed.txt
+
+  cargo_coverage:
+      name: Cargo Coverage
+      needs: [cargo_test]
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - name: Install Rust nightly
+          uses: dtolnay/rust-toolchain@master
+          id: rust-toolchain
+          with:
+            toolchain: nightly
+            components: llvm-tools
+        - name: Cache Cargo
+          uses: Swatinem/rust-cache@v2
+        - name: cargo install cargo-llvm-cov
+          uses: taiki-e/install-action@cargo-llvm-cov
+        - name: cargo llvm-cov
+          run: cargo llvm-cov --all-features --lcov --output-path lcov.info
+          env:
+            CARGO_HUSKY_DONT_INSTALL_HOOKS: true
+        - name: Upload to codecov.io
+          uses: codecov/codecov-action@v4
+          with:
+            fail_ci_if_error: true
+          env:
+            CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+  cargo_fuzzing: # https://rust-fuzz.github.io/book/cargo-fuzz
+    name: Cargo Fuzzing
+    needs: [cargo_test]
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@master
+        id: rust-toolchain
+        with:
+          toolchain: nightly
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        name: Install cargo-fuzz using install-action
+        with:
+          tool: cargo-fuzz
+      - name: Run mutant tests
+        id: fuzz
+        run: cargo fuzz run fuzz_play_game -- -max_len=4 -max_total_time=180
+      - name: upload artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzzing
+          path: fuzz/artifacts
+      - uses: mshick/add-pr-comment@v2
+        if: failure()
+        with:
+          message: "Fuzzing failed, artifacts are uploaded."
+
+
+  cargo_bench:
+    name: Cargo Bench
+    needs: [cargo_test]
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    env:
+      BENCHER_PROJECT: rust-template
+      BENCHER_TESTBED: ubuntu-latest
+      BENCHER_ADAPTER: rust
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bencherdev/bencher@main
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Dogfooding Benchmarks with Bencher
+        run: |
+          bencher run \
+          --if-branch "$GITHUB_REF_NAME" \
+          --else-if-branch "$GITHUB_BASE_REF" \
+          --err \
+          --github-actions ${{ secrets.GITHUB_TOKEN }} \
+          "cargo bench"

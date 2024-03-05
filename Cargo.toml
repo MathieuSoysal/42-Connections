@@ -1,0 +1,13 @@
+[package]
+name = "template_exercisme"
+escription = "A template for exercism exercises in Rust"
+repository = "https://github.com/MathieuSoysal/Exercism-Rust-Template"
+readme = "README.md"
+version = "0.1.0"
+authors = ["MathieuSoysal <hsoysal@student.42.fr>"]
+license = "Apache-2.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dev-dependencies]
