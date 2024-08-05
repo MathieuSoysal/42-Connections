@@ -60,7 +60,7 @@ jobs:
         - name: Check typos
           uses: crate-ci/typos@master
         - name: Lint dependencies
-          uses: EmbarkStudios/cargo-deny-action@v1
+          uses: EmbarkStudios/cargo-deny-action@v2
 
   cargo_clippy:
       name: Cargo Clippy
