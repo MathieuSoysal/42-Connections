@@ -1,0 +1,30 @@
+name: Archiving data for hour
+
+on:
+  schedule:
+    - cron: '* * * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: target/release/42_connections
+          path: ./binary
+
+      - name: Make Binary Executable
+        run: chmod +x ./binary/target/release/42_connections
+
+      - name: Execute Binary
+        run: ./binary/target/release/42_connections
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          SECRET_KEY_LOCATION: ${{ secrets.SECRET_KEY_LOCATION }}
+          SECRET_ID_LOCATION: ${{ secrets.SECRET_ID_LOCATION }}
+          SECRET_KEY_PROFIL: ${{ secrets.SECRET_KEY_PROFIL }}
+          SECRET_ID_PROFIL: ${{ secrets.SECRET_ID_PROFIL }}
+          RUST_LOG: info
