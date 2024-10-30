@@ -13,7 +13,7 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v3
         with:
-          name: target/release/ft_connections
+          name: 42_connections
           path: ./binary
 
       - name: Make Binary Executable
