@@ -1,4 +1,4 @@
-name: Archiving data for hour
+name: Archiving data for minute
 
 on:
   schedule:
@@ -13,14 +13,14 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v3
         with:
-          name: target/release/42_connections
+          name: target/release/ft_connections
           path: ./binary
 
       - name: Make Binary Executable
-        run: chmod +x ./binary/target/release/42_connections
+        run: chmod +x ./binary/target/release/ft_connections
 
       - name: Execute Binary
-        run: ./binary/target/release/42_connections
+        run: ./binary/target/release/ft_connections
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           SECRET_KEY_LOCATION: ${{ secrets.SECRET_KEY_LOCATION }}

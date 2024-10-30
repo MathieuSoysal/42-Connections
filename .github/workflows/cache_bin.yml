@@ -31,5 +31,5 @@ jobs:
             uses: actions/upload-artifact@v3
             with:
               name: 42_connections
-              path: target/release/42_connections
+              path: target/release/ft_connections
     
