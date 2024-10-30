@@ -1,26 +1,75 @@
-name: Archiving data for minute
+name: Archiving Data for Minute
 
 on:
   schedule:
-    - cron: '* * * * *'
-  workflow_dispatch:
+    - cron: '* * * * *'        # Runs every minute
+  workflow_dispatch:            # Allows manual triggering
 
 jobs:
   run:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout the Code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Attempt to Download the Artifact
       - name: Download Artifact
+        id: download_artifact
         uses: actions/download-artifact@v3
         with:
           name: 42_connections
           path: ./binary
+        continue-on-error: true    # Prevents workflow failure if artifact isn't found
 
+      # 3. Check if Artifact Was Downloaded Successfully
+      - name: Check if Artifact Exists
+        id: check_download
+        run: |
+          if [ -f ./binary/ft_connections ]; then
+            echo "artifact_found=true" >> $GITHUB_OUTPUT
+          else
+            echo "artifact_found=false" >> $GITHUB_OUTPUT
+          fi
+
+      # 4. Build the Binary if Artifact Not Found
+      - name: Build Binary
+        if: steps.check_download.outputs.artifact_found == 'false'
+        run: |
+          # Install Rust (if not already installed)
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+          
+          # Optionally, install a specific Rust toolchain
+          rustup toolchain install nightly
+          rustup default nightly
+          
+          # Build the release binary
+          cargo build --release
+
+      # 5. Upload the Newly Built Artifact for Future Runs
+      - name: Upload Artifact
+        if: steps.check_download.outputs.artifact_found == 'false'
+        uses: actions/upload-artifact@v3
+        with:
+          name: 42_connections
+          path: target/release/ft_connections
+
+      # 6. Make the Binary Executable
       - name: Make Binary Executable
-        run: chmod +x ./binary/target/release/ft_connections
+        run: chmod +x ./binary/ft_connections
 
+      # 7. Cache the Binary
+      - name: Cache Binary
+        uses: actions/cache@v3
+        with:
+          path: ./binary/ft_connections
+          key: ${{ runner.os }}-binary
+
+      # 8. Execute the Binary
       - name: Execute Binary
-        run: ./binary/target/release/ft_connections
+        run: ./binary/ft_connections
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           SECRET_KEY_LOCATION: ${{ secrets.SECRET_KEY_LOCATION }}
