@@ -12,7 +12,7 @@ jobs:
 
     build:
         runs-on: ubuntu-latest
-    
+
         steps:
           - name: Checkout Code
             uses: actions/checkout@v3
@@ -23,10 +23,10 @@ jobs:
             id: rust-toolchain
             with:
               toolchain: nightly
-    
+
           - name: Build Release Binary
             run: cargo build --release
-    
+
           - name: Upload Binary as Artifact
             uses: actions/upload-artifact@v3
             with:
