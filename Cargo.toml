@@ -1,7 +1,7 @@
 [package]
-name = "template_exercisme"
-escription = "A template for exercism exercises in Rust"
-repository = "https://github.com/MathieuSoysal/Exercism-Rust-Template"
+name = "ft_connections"
+escription = "Collect automaticaly data from 42"
+repository = "https://github.com/MathieuSoysal/42-Connections"
 readme = "README.md"
 version = "0.1.0"
 authors = ["MathieuSoysal <hsoysal@student.42.fr>"]
@@ -9,5 +9,14 @@ license = "Apache-2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.41", features = ["full"] }
+log = "0.4"
+env_logger = "0.11.5"
+mongodb = "3.1"
+serde_json = "1.0"
+reqwest = { version = "0.12.9", features = ["json"] }
+oauth2 = "4.4"
 
 [dev-dependencies]
