@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '* * * * *'        # Runs every minute
   workflow_dispatch:            # Allows manual triggering
-
+    
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -20,7 +20,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: 42_connections
-          path: ./binary
         continue-on-error: true    # Prevents workflow failure if artifact isn't found
 
       # 3. Check if Artifact Was Downloaded Successfully
@@ -58,18 +57,18 @@ jobs:
 
       # 6. Make the Binary Executable
       - name: Make Binary Executable
-        run: chmod +x ./binary/ft_connections
+        run: chmod +x ./target/release/ft_connections
 
       # 7. Cache the Binary
       - name: Cache Binary
         uses: actions/cache@v3
         with:
-          path: ./binary/ft_connections
+          path: ./target/release/ft_connections
           key: ${{ runner.os }}-binary
 
       # 8. Execute the Binary
       - name: Execute Binary
-        run: ./binary/ft_connections
+        run: ./target/release/ft_connections
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           SECRET_KEY_LOCATION: ${{ secrets.SECRET_KEY_LOCATION }}
