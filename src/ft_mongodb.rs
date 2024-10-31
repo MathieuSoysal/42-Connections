@@ -2,28 +2,23 @@ use std::error::Error;
 
 use log::{debug, error, info};
 use mongodb::{
-    bson::{doc, Bson, Document},
-    options::{ClientOptions, ServerApi, ServerApiVersion},
-    Client, Collection,
+    bson::{doc, Bson, Document}, options::ClientOptions, Client, Collection
 };
 
-pub async fn connect_to_mongodb(mongodb_uri: &str) -> Result<Client, Box<dyn Error>> {
+pub async fn connect_to_mongodb(mongodb_uri: &str) -> Client {
     info!("Connecting to MongoDB at {}", mongodb_uri);
-    let mut client_options = ClientOptions::parse(mongodb_uri).await?;
-    client_options.app_name = Some("42 analytics".to_string());
-    let server_api = ServerApi::builder().version(ServerApiVersion::V1).build();
-    client_options.server_api = Some(server_api);
-    let client = Client::with_options(client_options)?;
+    let client_options = ClientOptions::parse(mongodb_uri).await.unwrap();
+    let client = Client::with_options(client_options).unwrap();
     client
         .database("42")
         .run_command(doc! { "ping": 1 })
         .await
-        .map_err(|e| {
+        .unwrap_or_else(|e| {
             error!("Failed to connect to MongoDB: {}", e);
-            e
-        })?;
+            panic!();
+        });
     info!("Successfully connected to MongoDB.");
-    Ok(client)
+    client
 }
 
 pub async fn fetch_current_index(client: &Client) -> Result<u32, Box<dyn Error>> {
@@ -47,8 +42,15 @@ pub async fn insert_profile_in_mongo(
         if let Some(id_value) = doc.get("id").cloned() {
             doc.insert("_id", id_value.clone());
             let filter = doc! { "_id": id_value.clone() };
-            collection.replace_one(filter, doc).upsert(true).await?;
-            debug!("Inserted/Updated document with _id: {:?}", id_value);
+            collection
+                .replace_one(filter, doc)
+                .upsert(true)
+                .await
+                .or_else(|e| {
+                    error!("Failed to insert profile in MongoDB: {}", e);
+                    Err(e)
+                })?;
+            info!("Inserted/Updated document with _id: {:?}", id_value);
         } else {
             error!("Profil missing 'id' field: {:?}", doc);
         }
