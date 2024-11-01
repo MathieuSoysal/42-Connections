@@ -2,7 +2,9 @@ use std::error::Error;
 
 use log::{debug, error, info};
 use mongodb::{
-    bson::{doc, Bson, Document}, options::ClientOptions, Client, Collection
+    bson::{doc, Bson, Document},
+    options::ClientOptions,
+    Client, Collection,
 };
 
 pub async fn connect_to_mongodb(mongodb_uri: &str) -> Client {
@@ -98,6 +100,15 @@ pub async fn insert_ignoring_id_in_mongo(
     let bson_value = mongodb::bson::to_bson(&index)?;
     collection.insert_one(doc! {"_id": bson_value}).await?;
     debug!("Inserted in MongoDB ignoring id.");
+    Ok(())
+}
+
+pub async fn insert_failed_id_in_mongo(client: &Client, index: u32) -> Result<(), Box<dyn Error>> {
+    debug!("Inserting in MongoDB failed id.");
+    let collection: Collection<Document> = client.database("42").collection("failed_id");
+    let bson_value = mongodb::bson::to_bson(&index)?;
+    collection.insert_one(doc! {"_id": bson_value}).await?;
+    debug!("Inserted in MongoDB failed id.");
     Ok(())
 }
 

@@ -6,7 +6,7 @@ use tokio::time::sleep;
 
 use crate::{
     ft_api,
-    ft_mongodb::{self, insert_ignoring_id_in_mongo},
+    ft_mongodb::{self, insert_failed_id_in_mongo, insert_ignoring_id_in_mongo},
 };
 
 pub async fn fetching_data_from_42_to_mongo(
@@ -46,7 +46,11 @@ pub async fn fetch_location_from_42_to_mongo(
     token: &AccessToken,
 ) -> Result<(), Box<dyn std::error::Error>> {
     debug!("Fetching location from 42 API for user_id: {}", user_id);
-    let location_node = ft_api::request_location(&token, &user_id).await?;
+    let location_node = ft_api::request_location(&token, &user_id).await;
+    if location_node.is_err() {
+        insert_failed_id_in_mongo(client, user_id).await?;
+    }
+    let location_node = location_node?;
     if location_node.as_array().is_none() {
         warn!("Location not found for user_id: {}", user_id);
         insert_ignoring_id_in_mongo(client, user_id).await?;
