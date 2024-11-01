@@ -123,7 +123,7 @@ async fn increment_index_in_mongo(
             },
             doc! {
                 "$set": {
-                    "current_index": current_index + 20
+                    "current_index": current_index + 1
                 }
             },
         )
