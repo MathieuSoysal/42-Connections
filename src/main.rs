@@ -17,13 +17,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Starting 42 analytics.");
     let (client, secret_key_profil, secret_key_location) = initialize_variables().await?;
     let user_id = fetch_current_index(&client).await.unwrap();
-    fetching::fetching_data_from_42_to_mongo(
-        &client,
-        user_id,
-        &secret_key_profil,
-        &secret_key_location,
-    )
-    .await?;
+    for i in 0..user_id + 20 {
+        fetching::fetching_data_from_42_to_mongo(
+            &client,
+            i,
+            &secret_key_profil,
+            &secret_key_location,
+        )
+        .await?;
+    }
     info!("42 analytics finished.");
     Ok(())
 }
