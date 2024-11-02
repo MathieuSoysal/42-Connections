@@ -30,7 +30,11 @@ pub async fn fetch_profil_from_42_to_mongo(
     token: &AccessToken,
 ) -> Result<(), Box<dyn std::error::Error>> {
     debug!("Fetching profile from 42 API for user_id: {}", user_id);
-    let profile_node = ft_api::request_profil(&token, &user_id).await?;
+    let profile_node = ft_api::request_profil(&token, &user_id).await;
+    if profile_node.is_err() {
+        return Ok(());
+    }
+    let profile_node = profile_node?;
     if profile_node.get("id").is_none() {
         warn!("Profile not found for user_id: {}", user_id);
         return Ok(());
@@ -49,6 +53,7 @@ pub async fn fetch_location_from_42_to_mongo(
     let location_node = ft_api::request_location(&token, &user_id).await;
     if location_node.is_err() {
         insert_failed_id_in_mongo(client, user_id).await?;
+        return Ok(());
     }
     let location_node = location_node?;
     if location_node.as_array().is_none() {
