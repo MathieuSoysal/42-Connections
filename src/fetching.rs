@@ -1,8 +1,10 @@
+
 use futures::future;
 use log::{debug, info, warn};
 use mongodb::Client;
 use oauth2::AccessToken;
-use tokio::time::sleep;
+use tokio::time::sleep_until;
+use tokio::time::Instant;
 
 use crate::{
     ft_api,
@@ -16,9 +18,10 @@ pub async fn fetching_data_from_42_to_mongo(
     token_location: &AccessToken,
 ) -> Result<(), Box<dyn std::error::Error>> {
     debug!("Fetching data from 42 API for user_id: {}", user_id);
+    let inst = Instant::now();
     let fut1 = fetch_profil_from_42_to_mongo(client, user_id, token_profil);
     let fut2 = fetch_location_from_42_to_mongo(client, user_id, token_location);
-    sleep(std::time::Duration::from_secs(3)).await;
+    sleep_until(inst + std::time::Duration::from_secs(3)).await;
     future::try_join(fut1, fut2).await?;
     info!("Data fetched from 42 API for user_id: {}", user_id);
     Ok(())
