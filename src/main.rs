@@ -1,6 +1,7 @@
 #![feature(test)]
 extern crate test;
 
+use fetching::TIME_BETWEEN_REQUESTS;
 use ft_api::generate_access_token;
 use ft_mongodb::fetch_current_index;
 use log::{debug, error, info};
@@ -11,11 +12,13 @@ pub mod fetching;
 pub mod ft_api;
 pub mod ft_mongodb;
 
+const NB_MINUTES: u32 = 10;
+const NB_FETCH: u32 = (NB_MINUTES * 60) / TIME_BETWEEN_REQUESTS;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     info!("Starting 42 analytics.");
-    const NB_FETCH: u32 = 100;
     let (client, secret_key_profil, secret_key_location) = initialize_variables().await?;
     let user_id = fetch_current_index(&client, NB_FETCH).await.unwrap();
     for i in user_id..user_id + NB_FETCH {

@@ -10,6 +10,8 @@ use crate::{
     ft_mongodb::{self, insert_failed_id_in_mongo, insert_ignoring_id_in_mongo},
 };
 
+pub const TIME_BETWEEN_REQUESTS: u32 = 4;
+
 pub async fn fetching_data_from_42_to_mongo(
     client: &Client,
     user_id: u32,
@@ -21,7 +23,7 @@ pub async fn fetching_data_from_42_to_mongo(
     let fut1 = fetch_profil_from_42_to_mongo(client, user_id, token_profil);
     let fut2 = fetch_location_from_42_to_mongo(client, user_id, token_location);
     future::try_join(fut1, fut2).await?;
-    sleep_until(inst + std::time::Duration::from_secs(3)).await;
+    sleep_until(inst + std::time::Duration::from_secs(TIME_BETWEEN_REQUESTS.into())).await;
     info!("Data fetched from 42 API for user_id: {}", user_id);
     Ok(())
 }
