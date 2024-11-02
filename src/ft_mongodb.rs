@@ -23,12 +23,12 @@ pub async fn connect_to_mongodb(mongodb_uri: &str) -> Client {
     client
 }
 
-pub async fn fetch_current_index(client: &Client) -> Result<u32, Box<dyn Error>> {
+pub async fn fetch_current_index(client: &Client, nb_fetch: u32) -> Result<u32, Box<dyn Error>> {
     info!("Fetching current index from MongoDB.");
     let collection: Collection<Document> = client.database("application").collection("index");
     let found_doc = collection.find_one(doc! { "_id": 1 }).await?;
     let current_index = obtain_index(found_doc);
-    increment_index_in_mongo(collection, current_index).await?;
+    increment_index_in_mongo(collection, current_index, nb_fetch).await?;
     info!("Current index is {}", current_index);
     Ok(current_index)
 }
@@ -115,6 +115,7 @@ pub async fn insert_failed_id_in_mongo(client: &Client, index: u32) -> Result<()
 async fn increment_index_in_mongo(
     collection: Collection<Document>,
     current_index: u32,
+    nb_fetch: u32,
 ) -> Result<(), Box<dyn Error>> {
     collection
         .update_one(
@@ -123,7 +124,7 @@ async fn increment_index_in_mongo(
             },
             doc! {
                 "$set": {
-                    "current_index": current_index + 20
+                    "current_index": current_index + nb_fetch
                 }
             },
         )
