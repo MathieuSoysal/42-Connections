@@ -2,16 +2,12 @@ name: Archiving Data for Minute
 
 on:
   schedule:
-    - cron: '0/5 * * * *'        # Runs every minute
+    - cron: '*/5 * * * *'        # Runs every 5 minute
   workflow_dispatch:            # Allows manual triggering
     
 jobs:
   run:
     runs-on: ubuntu-latest
-
-    concurrency:
-      group: archiving-data
-      cancel-in-progress: true   # This allows overlapping runs
 
     steps:
       - name: Checkout Code
