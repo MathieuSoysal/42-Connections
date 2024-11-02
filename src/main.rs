@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     const NB_FETCH : u32 = 200;
     let (client, secret_key_profil, secret_key_location) = initialize_variables().await?;
     let user_id = fetch_current_index(&client, NB_FETCH).await.unwrap();
-    for i in 0..user_id + NB_FETCH {
+    for i in user_id..user_id + NB_FETCH {
         fetching::fetching_data_from_42_to_mongo(
             &client,
             i,
