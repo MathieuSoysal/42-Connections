@@ -36,14 +36,15 @@ pub async fn fetch_current_index(client: &Client, nb_fetch: u32) -> Result<u32, 
 pub async fn insert_profile_in_mongo(
     client: &Client,
     profile_node: &serde_json::Value,
+    user_id: u32,
 ) -> Result<(), Box<dyn Error>> {
     debug!("Inserting profile in MongoDB.");
     let collection: Collection<Document> = client.database("42").collection("profiles");
     let bson_value = mongodb::bson::to_bson(&profile_node)?;
     if let Bson::Document(mut doc) = bson_value {
         if let Some(id_value) = doc.get("id").cloned() {
-            doc.insert("_id", id_value.clone());
-            let filter = doc! { "_id": id_value.clone() };
+            doc.insert("_id", user_id);
+            let filter = doc! { "_id": user_id };
             collection
                 .replace_one(filter, doc)
                 .upsert(true)
@@ -65,8 +66,8 @@ pub async fn insert_profile_in_mongo(
 
 pub async fn insert_location_in_mongo(
     client: &Client,
-    user_id: u32,
     location_node: &serde_json::Value,
+    user_id: u32,
 ) -> Result<(), Box<dyn Error>> {
     debug!("Inserting location in MongoDB.");
     let collection: Collection<Document> = client.database("42").collection("locations");

@@ -39,7 +39,7 @@ pub async fn fetch_profil_from_42_to_mongo(
         warn!("Profile not found for user_id: {}", user_id);
         return Ok(());
     }
-    ft_mongodb::insert_profile_in_mongo(client, &profile_node).await?;
+    ft_mongodb::insert_profile_in_mongo(client, &profile_node, user_id).await?;
     info!("Profile inserted in MongoDB for user_id: {}", user_id);
     Ok(())
 }
@@ -61,7 +61,7 @@ pub async fn fetch_location_from_42_to_mongo(
         insert_ignoring_id_in_mongo(client, user_id).await?;
         return Ok(());
     }
-    ft_mongodb::insert_location_in_mongo(client, user_id, &location_node).await?;
+    ft_mongodb::insert_location_in_mongo(client, &location_node, user_id).await?;
     info!("Location inserted in MongoDB for user_id: {}", user_id);
     Ok(())
 }
