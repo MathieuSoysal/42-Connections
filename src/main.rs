@@ -15,7 +15,7 @@ pub mod ft_mongodb;
 async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     info!("Starting 42 analytics.");
-    const NB_FETCH : u32 = 200;
+    const NB_FETCH : u32 = 100;
     let (client, secret_key_profil, secret_key_location) = initialize_variables().await?;
     let user_id = fetch_current_index(&client, NB_FETCH).await.unwrap();
     for i in user_id..user_id + NB_FETCH {
