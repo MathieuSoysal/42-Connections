@@ -99,13 +99,7 @@ pub async fn insert_ignoring_id_in_mongo(
     debug!("Inserting in MongoDB ignoring id.");
     let collection: Collection<Document> = client.database("42").collection("ignoring_id");
     let bson_value = mongodb::bson::to_bson(&index)?;
-    collection
-        .update_one(
-            doc! {"_id": bson_value.clone()},
-            doc! {"_id": bson_value.clone()},
-        )
-        .upsert(true)
-        .await?;
+    collection.insert_one(doc! {"_id": bson_value}).await?;
     debug!("Inserted in MongoDB ignoring id.");
     Ok(())
 }
@@ -114,13 +108,7 @@ pub async fn insert_failed_id_in_mongo(client: &Client, index: u32) -> Result<()
     debug!("Inserting in MongoDB failed id.");
     let collection: Collection<Document> = client.database("42").collection("failed_id");
     let bson_value = mongodb::bson::to_bson(&index)?;
-    collection
-        .update_one(
-            doc! {"_id": bson_value.clone()},
-            doc! {"_id": bson_value.clone()},
-        )
-        .upsert(true)
-        .await?;
+    collection.insert_one(doc! {"_id": bson_value}).await?;
     debug!("Inserted in MongoDB failed id.");
     Ok(())
 }
