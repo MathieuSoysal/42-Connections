@@ -9,6 +9,10 @@ jobs:
   run:
     runs-on: ubuntu-latest
 
+    concurrency:
+      group: archiving-data
+      cancel-in-progress: true   # This allows overlapping runs
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
