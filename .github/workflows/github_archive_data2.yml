@@ -1,0 +1,24 @@
+name: Archiving Data for Minute
+
+on:
+  schedule:
+    - cron: '*/11 * * * *'        # Runs every 5 minute
+  workflow_dispatch:            # Allows manual triggering
+    
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Execute Binary
+        run: ./ft_connections
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI2 }}
+          SECRET_KEY_LOCATION: ${{ secrets.SECRET_KEY_LOCATION2 }}
+          SECRET_ID_LOCATION: ${{ secrets.SECRET_ID_LOCATION2 }}
+          SECRET_KEY_PROFIL: ${{ secrets.SECRET_KEY_PROFIL2 }}
+          SECRET_ID_PROFIL: ${{ secrets.SECRET_ID_PROFIL2 }}
+          RUST_LOG: info
