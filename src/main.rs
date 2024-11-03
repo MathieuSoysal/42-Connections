@@ -22,14 +22,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Starting 42 analytics.");
     let (client, secret_key_profil, secret_key_location) = initialize_variables().await?;
     let user_id = fetch_current_index(&client, NB_FETCH * 2).await.unwrap();
-    for mut i in user_id..user_id + (NB_FETCH * 2) {
-        i += 1;
+    let mut i = user_id;
+    while i < user_id + (NB_FETCH * 2) {
         let current = Instant::now();
         futures::future::try_join(
-            fetching::fetch_profil_from_42_to_mongo(&client, i - 1, &secret_key_location),
+            fetching::fetch_profil_from_42_to_mongo(&client, i, &secret_key_location),
             fetching::fetch_profil_from_42_to_mongo(&client, i, &secret_key_profil),
         )
         .await?;
+        i += 2;
         sleep_until(current + Duration::from_secs(TIME_BETWEEN_REQUESTS.into())).await;
     }
     info!("42 analytics finished.");
