@@ -6,7 +6,8 @@ use ft_api::generate_access_token;
 use ft_mongodb::fetch_current_index;
 use log::{debug, error, info};
 use oauth2::AccessToken;
-use std::{env, error::Error};
+use std::{env, error::Error, time::Duration};
+use tokio::time::{sleep_until, Instant};
 
 pub mod fetching;
 pub mod ft_api;
@@ -20,15 +21,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     info!("Starting 42 analytics.");
     let (client, secret_key_profil, secret_key_location) = initialize_variables().await?;
-    let user_id = fetch_current_index(&client, NB_FETCH).await.unwrap();
-    for i in user_id..user_id + NB_FETCH {
-        fetching::fetching_data_from_42_to_mongo(
-            &client,
-            i,
-            &secret_key_profil,
-            &secret_key_location,
+    let user_id = fetch_current_index(&client, NB_FETCH * 2).await.unwrap();
+    for mut i in user_id..user_id + (NB_FETCH * 2) {
+        i += 1;
+        let current = Instant::now();
+        futures::future::try_join(
+            fetching::fetch_profil_from_42_to_mongo(&client, i - 1, &secret_key_location),
+            fetching::fetch_profil_from_42_to_mongo(&client, i, &secret_key_profil),
         )
         .await?;
+        sleep_until(current + Duration::from_secs(TIME_BETWEEN_REQUESTS.into())).await;
     }
     info!("42 analytics finished.");
     Ok(())

@@ -53,7 +53,7 @@ pub async fn insert_profile_in_mongo(
                     error!("Failed to insert profile in MongoDB: {}", e);
                     Err(e)
                 })?;
-            info!("Inserted/Updated document with _id: {:?}", id_value);
+            info!("mongo : Inserted/Updated document with _id: {:?}", id_value);
         } else {
             error!("Profil missing 'id' field: {:?}", doc);
         }

@@ -33,14 +33,17 @@ pub async fn fetch_profil_from_42_to_mongo(
     user_id: u32,
     token: &AccessToken,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    debug!("Fetching profile from 42 API for user_id: {}", user_id);
+    info!("Fetching profile from 42 API for user_id: {}", user_id);
     let profile_node = ft_api::request_profil(&token, &user_id).await;
     if profile_node.is_err() {
+        warn!("Profil failed for user_id: {}", user_id);
+        insert_failed_id_in_mongo(client, user_id).await?;
         return Ok(());
     }
     let profile_node = profile_node?;
-    if profile_node.get("id").is_none() {
-        warn!("Profile not found for user_id: {}", user_id);
+    if profile_node.as_array().is_none() {
+        warn!("Profil not found for user_id: {}", user_id);
+        insert_ignoring_id_in_mongo(client, user_id).await?;
         return Ok(());
     }
     ft_mongodb::insert_profile_in_mongo(client, &profile_node, user_id).await?;
