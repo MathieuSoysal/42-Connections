@@ -26,8 +26,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     while i < user_id + (NB_FETCH * 2) {
         let current = Instant::now();
         futures::future::try_join(
-            fetching::fetch_profil_from_42_to_mongo(&client, i, &secret_key_location),
-            fetching::fetch_profil_from_42_to_mongo(&client, i, &secret_key_profil),
+            fetching::fetch_profil_from_42_to_mongo(&client, i.clone(), &secret_key_location),
+            fetching::fetch_profil_from_42_to_mongo(&client, i.clone() + 1, &secret_key_profil),
         )
         .await?;
         i += 2;
