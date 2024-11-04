@@ -41,7 +41,7 @@ pub async fn fetch_profil_from_42_to_mongo(
         return Ok(());
     }
     let profile_node = profile_node?;
-    if profile_node.as_array().is_none() {
+    if profile_node.get("id").is_none() {
         warn!("Profil not found for user_id: {}", user_id);
         insert_ignoring_id_in_mongo(client, user_id).await?;
         return Ok(());
