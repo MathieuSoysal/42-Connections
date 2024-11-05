@@ -44,9 +44,13 @@ pub async fn request_profil(
 pub async fn request_location(
     token: &AccessToken,
     user_id: &u32,
+    page_number: &u32,
 ) -> Result<serde_json::Value, Box<dyn Error>> {
     debug!("Requesting location from API for user_id: {}", user_id);
-    let url = format!("https://api.intra.42.fr/v2/users/{}/locations", user_id);
+    let url = format!(
+        "https://api.intra.42.fr/v2/users/{}/locations?page[size]=100&page[number]={}",
+        user_id, page_number
+    );
     let client = reqwest::Client::new();
     let response = client
         .get(&url)

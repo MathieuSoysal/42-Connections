@@ -1,0 +1,89 @@
+use std::error::Error;
+
+use log::{debug, error, info};
+use mongodb::{
+    bson::{doc, Document},
+    Client, Collection,
+};
+
+pub async fn insert_user_locations_in_mongodb(
+    client: &Client,
+    user_id: u32,
+    locations_node: &serde_json::Value,
+) -> Result<(), Box<dyn Error>> {
+    info!("Inserting location in MongoDB.");
+    let locations = locations_node
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|location_node| inser_location_in_mongodb(client, location_node, user_id));
+    futures::future::join_all(locations).await;
+    Ok(())
+}
+
+pub async fn get_an_user_id_and_page_number(client: &Client) -> Result<(u32, u32), Box<dyn Error>> {
+    info!("Fetching current index from MongoDB.");
+    let collection: Collection<Document> =
+        client.database("application").collection("locations_index");
+    let result = collection.find_one_and_delete(doc! {}).await.or_else(|e| {
+        error!("Failed to find a location index from MongoDB: {}", e);
+        Err(e)
+    })?;
+    if let Some(doc) = result {
+        let user_id = doc.get("_id").unwrap().as_i32().unwrap() as u32;
+        let page_number = doc.get("page_number").unwrap().as_i32().unwrap() as u32;
+        info!("Current location index is {}", user_id);
+        return Ok((user_id, page_number));
+    }
+    error!("Failed to fetch current index from MongoDB.");
+    Err("Failed to fetch current index from MongoDB.".into())
+}
+
+pub async fn insert_user_id_and_page_number(
+    client: &Client,
+    user_id: u32,
+    page_number: u32,
+) -> Result<(), Box<dyn Error>> {
+    info!("Inserting location index in MongoDB.");
+    let collection: Collection<Document> =
+        client.database("application").collection("locations_index");
+    let doc = doc! { "_id": user_id, "page_number": page_number };
+    collection.insert_one(doc).await.or_else(|e| {
+        error!("Failed to insert location index in MongoDB: {}", e);
+        Err(e)
+    })?;
+    info!("Location index inserted in MongoDB.");
+    Ok(())
+}
+
+async fn inser_location_in_mongodb(
+    client: &Client,
+    location_node: &serde_json::Value,
+    user_id: u32,
+) -> Result<(), Box<dyn Error>> {
+    let collection: Collection<Document> = client.database("42").collection("locations");
+    let bson_value = mongodb::bson::to_bson(location_node).unwrap();
+    if let mongodb::bson::Bson::Document(mut doc) = bson_value {
+        doc.insert("user_id", user_id);
+        let location_id = doc.get("id").unwrap().as_i64().unwrap();
+        doc.insert("_id", location_id);
+        doc.remove("user");
+        doc.remove("project");
+        let filter = doc! { "_id": location_id };
+        collection
+            .replace_one(filter, doc)
+            .upsert(true)
+            .await
+            .or_else(|e| {
+                error!(
+                    "Failed to insert location {} in MongoDB: {}",
+                    location_id, e
+                );
+                Err(e)
+            })?;
+        debug!("Location {} inserted in MongoDB.", location_id);
+    } else {
+        error!("Expected a document but got a different BSON type.");
+    }
+    Ok(())
+}

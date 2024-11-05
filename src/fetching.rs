@@ -1,32 +1,17 @@
-use futures::future;
-use log::{debug, info, warn};
+use std::time::Duration;
+
+use log::{info, warn};
 use mongodb::Client;
 use oauth2::AccessToken;
-use tokio::time::sleep_until;
-use tokio::time::Instant;
+use tokio::time::{sleep_until, Instant};
 
 use crate::{
-    ft_api,
-    ft_mongodb::{self, insert_failed_id_in_mongo, insert_ignoring_id_in_mongo},
+    fetching_locations, ft_api,
+    ft_mongodb_profiles::{self, insert_failed_id_in_mongo, insert_ignoring_id_in_mongo},
+    NB_FETCH,
 };
 
 pub const TIME_BETWEEN_REQUESTS: u32 = 4;
-
-pub async fn fetching_data_from_42_to_mongo(
-    client: &Client,
-    user_id: u32,
-    token_profil: &AccessToken,
-    token_location: &AccessToken,
-) -> Result<(), Box<dyn std::error::Error>> {
-    debug!("Fetching data from 42 API for user_id: {}", user_id);
-    let inst = Instant::now();
-    let fut1 = fetch_profil_from_42_to_mongo(client, user_id, token_profil);
-    let fut2 = fetch_location_from_42_to_mongo(client, user_id, token_location);
-    future::try_join(fut1, fut2).await?;
-    sleep_until(inst + std::time::Duration::from_secs(TIME_BETWEEN_REQUESTS.into())).await;
-    info!("Data fetched from 42 API for user_id: {}", user_id);
-    Ok(())
-}
 
 pub async fn fetch_profil_from_42_to_mongo(
     client: &Client,
@@ -46,29 +31,45 @@ pub async fn fetch_profil_from_42_to_mongo(
         insert_ignoring_id_in_mongo(client, user_id).await?;
         return Ok(());
     }
-    ft_mongodb::insert_profile_in_mongo(client, &profile_node, user_id).await?;
+    ft_mongodb_profiles::insert_profile_in_mongo(client, &profile_node, user_id).await?;
     info!("Profile inserted in MongoDB for user_id: {}", user_id);
     Ok(())
 }
 
-pub async fn fetch_location_from_42_to_mongo(
+pub async fn fetch_locations_from_42_to_mongo(
+    client: &Client,
+    token_1: &AccessToken,
+    token_2: &AccessToken,
+) -> Result<(), Box<dyn std::error::Error>> {
+    info!("All users have been fetched.");
+    for _i in 0..NB_FETCH {
+        let current = Instant::now();
+        futures::future::try_join(
+            fetching_locations::fetch_location_from_42_to_mongo(&client, &token_1),
+            fetching_locations::fetch_location_from_42_to_mongo(&client, &token_2),
+        )
+        .await?;
+        sleep_until(current + Duration::from_secs(TIME_BETWEEN_REQUESTS.into())).await;
+    }
+    Ok(())
+}
+
+pub async fn fetch_profiles_from_42_to_mongodb(
     client: &Client,
     user_id: u32,
-    token: &AccessToken,
+    api_key_1: &AccessToken,
+    api_key_2: &AccessToken,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    debug!("Fetching location from 42 API for user_id: {}", user_id);
-    let location_node = ft_api::request_location(&token, &user_id).await;
-    if location_node.is_err() {
-        insert_failed_id_in_mongo(client, user_id).await?;
-        return Ok(());
+    let mut i = user_id;
+    while i < user_id + (NB_FETCH * 2) {
+        let current = Instant::now();
+        futures::future::try_join(
+             fetch_profil_from_42_to_mongo(&client, i.clone(), &api_key_2),
+             fetch_profil_from_42_to_mongo(&client, i.clone() + 1, &api_key_1),
+        )
+        .await?;
+        i += 2;
+        sleep_until(current + Duration::from_secs(TIME_BETWEEN_REQUESTS.into())).await;
     }
-    let location_node = location_node?;
-    if location_node.as_array().is_none() {
-        warn!("Location not found for user_id: {}", user_id);
-        insert_ignoring_id_in_mongo(client, user_id).await?;
-        return Ok(());
-    }
-    ft_mongodb::insert_location_in_mongo(client, &location_node, user_id).await?;
-    info!("Location inserted in MongoDB for user_id: {}", user_id);
     Ok(())
 }

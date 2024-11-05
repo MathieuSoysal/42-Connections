@@ -1,37 +1,36 @@
 #![feature(test)]
 extern crate test;
 
-use fetching::TIME_BETWEEN_REQUESTS;
+use fetching::{
+    fetch_locations_from_42_to_mongo, fetch_profiles_from_42_to_mongodb, TIME_BETWEEN_REQUESTS,
+};
 use ft_api::generate_access_token;
-use ft_mongodb::fetch_current_index;
+use ft_mongodb_profiles::fetch_current_index;
 use log::{debug, error, info};
 use oauth2::AccessToken;
-use std::{env, error::Error, time::Duration};
-use tokio::time::{sleep_until, Instant};
+use std::{env, error::Error};
 
 pub mod fetching;
+pub mod fetching_locations;
 pub mod ft_api;
 pub mod ft_mongodb;
+pub mod ft_mongodb_locations;
+pub mod ft_mongodb_profiles;
 
-const NB_MINUTES: u32 = 10;
-const NB_FETCH: u32 = (NB_MINUTES * 60) / TIME_BETWEEN_REQUESTS;
+pub const NB_MINUTES: u32 = 10;
+pub const NB_FETCH: u32 = (NB_MINUTES * 60) / TIME_BETWEEN_REQUESTS;
+pub const MAX_INDEX: u32 = 207864;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     info!("Starting 42 analytics.");
-    let (client, secret_key_profil, secret_key_location) = initialize_variables().await?;
+    let (client, api_key_1, api_key_2) = initialize_variables().await?;
     let user_id = fetch_current_index(&client, NB_FETCH * 2).await.unwrap();
-    let mut i = user_id;
-    while i < user_id + (NB_FETCH * 2) {
-        let current = Instant::now();
-        futures::future::try_join(
-            fetching::fetch_profil_from_42_to_mongo(&client, i.clone(), &secret_key_location),
-            fetching::fetch_profil_from_42_to_mongo(&client, i.clone() + 1, &secret_key_profil),
-        )
-        .await?;
-        i += 2;
-        sleep_until(current + Duration::from_secs(TIME_BETWEEN_REQUESTS.into())).await;
+    if user_id >= MAX_INDEX {
+        fetch_locations_from_42_to_mongo(&client, &api_key_1, &api_key_2).await?;
+    } else {
+        fetch_profiles_from_42_to_mongodb(&client, user_id, &api_key_1, &api_key_2).await?;
     }
     info!("42 analytics finished.");
     Ok(())
