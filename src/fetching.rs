@@ -64,8 +64,8 @@ pub async fn fetch_profiles_from_42_to_mongodb(
     while i < user_id + (NB_FETCH * 2) {
         let current = Instant::now();
         futures::future::try_join(
-             fetch_profil_from_42_to_mongo(&client, i.clone(), &api_key_2),
-             fetch_profil_from_42_to_mongo(&client, i.clone() + 1, &api_key_1),
+            fetch_profil_from_42_to_mongo(&client, i.clone(), &api_key_2),
+            fetch_profil_from_42_to_mongo(&client, i.clone() + 1, &api_key_1),
         )
         .await?;
         i += 2;
