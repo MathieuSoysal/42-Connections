@@ -16,7 +16,7 @@ pub async fn insert_user_locations_in_mongodb(
         .as_array()
         .unwrap()
         .iter()
-        .map(|location_node| inser_location_in_mongodb(client, location_node, user_id));
+        .map(|location_node| insert_location_in_mongodb(client, location_node, user_id));
     futures::future::join_all(locations).await;
     Ok(())
 }
@@ -50,15 +50,19 @@ pub async fn insert_user_id_and_page_number(
     let collection: Collection<Document> =
         client.database("application").collection("locations_index");
     let doc = doc! { "_id": user_id, "page_number": page_number };
-    collection.insert_one(doc).await.or_else(|e| {
-        error!("Failed to insert location index in MongoDB: {}", e);
-        Err(e)
-    })?;
+    collection
+        .update_one(doc! {"_id": user_id}, doc)
+        .upsert(true)
+        .await
+        .or_else(|e| {
+            error!("Failed to insert location index in MongoDB: {}", e);
+            Err(e)
+        })?;
     info!("Location index inserted in MongoDB.");
     Ok(())
 }
 
-async fn inser_location_in_mongodb(
+async fn insert_location_in_mongodb(
     client: &Client,
     location_node: &serde_json::Value,
     user_id: i64,
