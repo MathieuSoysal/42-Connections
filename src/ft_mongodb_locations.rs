@@ -49,9 +49,11 @@ pub async fn insert_user_id_and_page_number(
     info!("Inserting location index in MongoDB.");
     let collection: Collection<Document> =
         client.database("application").collection("locations_index");
-    let doc = doc! { "_id": user_id, "page_number": page_number };
     collection
-        .update_one(doc! {"_id": user_id}, doc)
+        .update_one(
+            doc! {"_id": user_id},
+            doc! {"$set": {"_id": user_id, "page_number": page_number}},
+        )
         .upsert(true)
         .await
         .or_else(|e| {
