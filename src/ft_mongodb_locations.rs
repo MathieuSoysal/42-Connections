@@ -11,7 +11,7 @@ pub async fn insert_user_locations_in_mongodb(
     user_id: i64,
     locations_node: &serde_json::Value,
 ) -> Result<(), Box<dyn Error>> {
-    info!("Inserting location in MongoDB.");
+    info!("Inserting locations in MongoDB for user {}.", user_id);
     let locations = locations_node
         .as_array()
         .unwrap()
@@ -22,11 +22,11 @@ pub async fn insert_user_locations_in_mongodb(
 }
 
 pub async fn get_an_user_id_and_page_number(client: &Client) -> Result<(i64, i32), Box<dyn Error>> {
-    info!("Fetching current index from MongoDB.");
     let collection: Collection<Document> =
         client.database("application").collection("locations_index");
     let result = collection.find_one_and_delete(doc! {}).await.or_else(|e| {
         error!("Failed to find a location index from MongoDB: {}", e);
+        error!("Maybe all locations have been fetched.");
         Err(e)
     })?;
     if let Some(doc) = result {
@@ -34,7 +34,10 @@ pub async fn get_an_user_id_and_page_number(client: &Client) -> Result<(i64, i32
             Ok(value) => value,
             Err(value) => return value,
         };
-        info!("Current location index is {}", user_id);
+        info!(
+            "Current location index is for user {} and page {}",
+            user_id, page_number
+        );
         return Ok((user_id, page_number));
     }
     error!("Failed to fetch current index from MongoDB.");
@@ -46,21 +49,23 @@ pub async fn insert_user_id_and_page_number(
     user_id: i64,
     page_number: i32,
 ) -> Result<(), Box<dyn Error>> {
-    info!("Inserting location index in MongoDB.");
     let collection: Collection<Document> =
         client.database("application").collection("locations_index");
     collection
-        .update_one(
+        .replace_one(
             doc! {"_id": user_id},
-            doc! {"$set": {"_id": user_id, "page_number": page_number}},
+            doc! {"_id": user_id, "page_number": page_number},
         )
         .upsert(true)
         .await
         .or_else(|e| {
-            error!("Failed to insert location index in MongoDB: {}", e);
+            error!(
+                "Failed to insert location index for user {} in MongoDB: {}",
+                user_id, e
+            );
             Err(e)
         })?;
-    info!("Location index inserted in MongoDB.");
+    info!("Location index for user {} inserted in MongoDB.", user_id);
     Ok(())
 }
 
@@ -73,7 +78,7 @@ async fn insert_location_in_mongodb(
     let bson_value = mongodb::bson::to_bson(location_node).unwrap();
     if let mongodb::bson::Bson::Document(mut doc) = bson_value {
         doc.insert("user_id", user_id);
-        let location_id = doc.get("id").unwrap().as_i64().unwrap();
+        let location_id = doc.get_i64("id")?;
         doc.insert("_id", location_id);
         doc.remove("user");
         doc.remove("project");
