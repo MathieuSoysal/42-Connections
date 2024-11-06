@@ -30,8 +30,9 @@ pub async fn get_an_user_id_and_page_number(client: &Client) -> Result<(i64, i32
         Err(e)
     })?;
     if let Some(doc) = result {
-        let user_id = doc.get("_id").unwrap().as_i64().unwrap() as i64;
-        let page_number = doc.get("page_number").unwrap().as_i32().unwrap() as i32;
+        debug!("Found a location index {} in MongoDB.", doc);
+        let user_id = doc.get_i64("_id")?;
+        let page_number = doc.get_i32("page_number")?;
         info!("Current location index is {}", user_id);
         return Ok((user_id, page_number));
     }

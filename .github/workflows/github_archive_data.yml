@@ -21,4 +21,4 @@ jobs:
           SECRET_ID_LOCATION: ${{ secrets.SECRET_ID_LOCATION }}
           SECRET_KEY_PROFIL: ${{ secrets.SECRET_KEY_PROFIL }}
           SECRET_ID_PROFIL: ${{ secrets.SECRET_ID_PROFIL }}
-          RUST_LOG: info
+          RUST_LOG: debug
