@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Starting 42 analytics.");
     let (client, api_key_1, api_key_2) = initialize_variables().await?;
     let user_id = fetch_current_index(&client, NB_FETCH * 2).await.unwrap();
-    if user_id >= MAX_INDEX {
+    if user_id > MAX_INDEX {
         fetch_locations_from_42_to_mongo(&client, &api_key_1, &api_key_2).await?;
     } else {
         fetch_profiles_from_42_to_mongodb(&client, user_id, &api_key_1, &api_key_2).await?;

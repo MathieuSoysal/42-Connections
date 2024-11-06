@@ -43,8 +43,8 @@ pub async fn request_profil(
 
 pub async fn request_location(
     token: &AccessToken,
-    user_id: &u32,
-    page_number: &u32,
+    user_id: &i64,
+    page_number: &i32,
 ) -> Result<serde_json::Value, Box<dyn Error>> {
     debug!("Requesting location from API for user_id: {}", user_id);
     let url = format!(

@@ -8,7 +8,7 @@ use mongodb::{
 
 pub async fn insert_user_locations_in_mongodb(
     client: &Client,
-    user_id: u32,
+    user_id: i64,
     locations_node: &serde_json::Value,
 ) -> Result<(), Box<dyn Error>> {
     info!("Inserting location in MongoDB.");
@@ -21,7 +21,7 @@ pub async fn insert_user_locations_in_mongodb(
     Ok(())
 }
 
-pub async fn get_an_user_id_and_page_number(client: &Client) -> Result<(u32, u32), Box<dyn Error>> {
+pub async fn get_an_user_id_and_page_number(client: &Client) -> Result<(i64, i32), Box<dyn Error>> {
     info!("Fetching current index from MongoDB.");
     let collection: Collection<Document> =
         client.database("application").collection("locations_index");
@@ -30,8 +30,8 @@ pub async fn get_an_user_id_and_page_number(client: &Client) -> Result<(u32, u32
         Err(e)
     })?;
     if let Some(doc) = result {
-        let user_id = doc.get("_id").unwrap().as_i32().unwrap() as u32;
-        let page_number = doc.get("page_number").unwrap().as_i32().unwrap() as u32;
+        let user_id = doc.get("_id").unwrap().as_i64().unwrap() as i64;
+        let page_number = doc.get("page_number").unwrap().as_i32().unwrap() as i32;
         info!("Current location index is {}", user_id);
         return Ok((user_id, page_number));
     }
@@ -41,8 +41,8 @@ pub async fn get_an_user_id_and_page_number(client: &Client) -> Result<(u32, u32
 
 pub async fn insert_user_id_and_page_number(
     client: &Client,
-    user_id: u32,
-    page_number: u32,
+    user_id: i64,
+    page_number: i32,
 ) -> Result<(), Box<dyn Error>> {
     info!("Inserting location index in MongoDB.");
     let collection: Collection<Document> =
@@ -59,7 +59,7 @@ pub async fn insert_user_id_and_page_number(
 async fn inser_location_in_mongodb(
     client: &Client,
     location_node: &serde_json::Value,
-    user_id: u32,
+    user_id: i64,
 ) -> Result<(), Box<dyn Error>> {
     let collection: Collection<Document> = client.database("42").collection("locations");
     let bson_value = mongodb::bson::to_bson(location_node).unwrap();
