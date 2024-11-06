@@ -2,7 +2,7 @@ use std::error::Error;
 
 use log::{debug, error, info};
 use mongodb::{
-    bson::{doc, Document},
+    bson::{doc, Bson, Document},
     Client, Collection,
 };
 
@@ -30,9 +30,10 @@ pub async fn get_an_user_id_and_page_number(client: &Client) -> Result<(i64, i32
         Err(e)
     })?;
     if let Some(doc) = result {
-        debug!("Found a location index {} in MongoDB.", doc);
-        let user_id = doc.get_i64("_id")?;
-        let page_number = doc.get_i32("page_number")?;
+        let (user_id, page_number) = match parse_location_index(doc) {
+            Ok(value) => value,
+            Err(value) => return value,
+        };
         info!("Current location index is {}", user_id);
         return Ok((user_id, page_number));
     }
@@ -87,4 +88,42 @@ async fn inser_location_in_mongodb(
         error!("Expected a document but got a different BSON type.");
     }
     Ok(())
+}
+
+fn parse_location_index(doc: Document) -> Result<(i64, i32), Result<(i64, i32), Box<dyn Error>>> {
+    debug!("Found a location index {:?} in MongoDB.", doc);
+    let user_id = match doc.get("_id") {
+        Some(Bson::Int64(id)) => *id,
+        Some(Bson::Int32(id)) => *id as i64,
+        _ => return Err(Err("Field '_id' does not have the expected type".into())),
+    };
+    let page_number = match doc.get("page_number") {
+        Some(Bson::Int32(page)) => *page,
+        Some(Bson::Int64(page)) => *page as i32,
+        _ => {
+            return Err(Err(
+                "Field 'page_number' does not have the expected type".into()
+            ))
+        }
+    };
+    Ok((user_id, page_number))
+}
+
+#[cfg(test)]
+mod tests {
+    // Add your test cases here
+
+    #[test]
+    fn test_parse_location_index_with_i32() {
+        use super::*;
+        let doc = doc! { "_id": 42 as i32, "page_number": 1 };
+        assert_eq!(parse_location_index(doc).unwrap(), (42, 1));
+    }
+
+    #[test]
+    fn test_parse_location_index_with_i64() {
+        use super::*;
+        let doc = doc! { "_id": 42 as i64, "page_number": 1 };
+        assert_eq!(parse_location_index(doc).unwrap(), (42, 1));
+    }
 }
