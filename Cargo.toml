@@ -1,6 +1,6 @@
 [package]
 name = "ft_connections"
-escription = "Collect automaticaly data from 42"
+description = "Collect automaticaly data from 42"
 repository = "https://github.com/MathieuSoysal/42-Connections"
 readme = "README.md"
 version = "0.1.0"

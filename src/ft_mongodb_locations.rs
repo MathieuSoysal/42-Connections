@@ -62,7 +62,10 @@ pub async fn insert_user_id_and_page_number(
             );
             Err(e)
         })?;
-    info!("Location index for user {} inserted in MongoDB.", user_id);
+    info!(
+        "Location index for user {} and page {} inserted in MongoDB.",
+        user_id, page_number
+    );
     Ok(())
 }
 
