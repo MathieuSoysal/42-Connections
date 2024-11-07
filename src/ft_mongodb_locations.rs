@@ -14,7 +14,7 @@ pub async fn insert_user_locations_in_mongodb(
     info!("Inserting locations in MongoDB for user {}.", user_id);
     let locations = map_locations_to_bson_documents(locations_node, user_id).await;
     let nb_locations = locations.len();
-    insert_user_locations_into_mongodb(client, user_id, locations).await;
+    insert_user_locations_into_mongodb(client, locations).await;
     Ok(nb_locations)
 }
 
@@ -104,13 +104,9 @@ fn parse_location_index(doc: Document) -> Result<(i64, i32), Result<(i64, i32), 
     Ok((user_id, page_number))
 }
 
-async fn insert_user_locations_into_mongodb(
-    client: &Client,
-    user_id: i64,
-    locations: Vec<Document>,
-) {
+async fn insert_user_locations_into_mongodb(client: &Client, locations: Vec<Document>) {
     let result = client
-        .database(&user_id.to_string())
+        .database("42")
         .collection::<Document>("locations")
         .insert_many(locations)
         .ordered(false)
