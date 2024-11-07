@@ -10,15 +10,12 @@ pub async fn insert_user_locations_in_mongodb(
     client: &Client,
     user_id: i64,
     locations_node: &serde_json::Value,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<usize, Box<dyn Error>> {
     info!("Inserting locations in MongoDB for user {}.", user_id);
-    let locations = locations_node
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|location_node| insert_location_in_mongodb(client, location_node, user_id));
-    futures::future::join_all(locations).await;
-    Ok(())
+    let locations = map_locations_to_bson_documents(locations_node, user_id).await;
+    let nb_locations = locations.len();
+    insert_user_locations_into_mongodb(client, user_id, locations).await;
+    Ok(nb_locations)
 }
 
 pub async fn get_an_user_id_and_page_number(client: &Client) -> Result<(i64, i32), Box<dyn Error>> {
@@ -69,36 +66,23 @@ pub async fn insert_user_id_and_page_number(
     Ok(())
 }
 
-async fn insert_location_in_mongodb(
-    client: &Client,
+async fn convert_json_location_to_bson(
     location_node: &serde_json::Value,
     user_id: i64,
-) -> Result<(), Box<dyn Error>> {
-    let collection: Collection<Document> = client.database("42").collection("locations");
+) -> Document {
     let bson_value = mongodb::bson::to_bson(location_node).unwrap();
     if let mongodb::bson::Bson::Document(mut doc) = bson_value {
         doc.insert("user_id", user_id);
-        let location_id = doc.get_i64("id")?;
+        let location_id = doc.get_i64("id").unwrap();
         doc.insert("_id", location_id);
         doc.remove("user");
         doc.remove("project");
-        let filter = doc! { "_id": location_id };
-        collection
-            .replace_one(filter, doc)
-            .upsert(true)
-            .await
-            .or_else(|e| {
-                error!(
-                    "Failed to insert location {} in MongoDB: {}",
-                    location_id, e
-                );
-                Err(e)
-            })?;
-        debug!("Location {} inserted in MongoDB.", location_id);
+        let doc = doc;
+        return doc;
     } else {
         error!("Expected a document but got a different BSON type.");
+        panic!("Expected a document but got a different BSON type.");
     }
-    Ok(())
 }
 
 fn parse_location_index(doc: Document) -> Result<(i64, i32), Result<(i64, i32), Box<dyn Error>>> {
@@ -120,9 +104,97 @@ fn parse_location_index(doc: Document) -> Result<(i64, i32), Result<(i64, i32), 
     Ok((user_id, page_number))
 }
 
+async fn insert_user_locations_into_mongodb(
+    client: &Client,
+    user_id: i64,
+    locations: Vec<Document>,
+) {
+    let result = client
+        .database(&user_id.to_string())
+        .collection::<Document>("locations")
+        .insert_many(locations)
+        .ordered(false)
+        .await;
+    if let Err(e) = result {
+        error!("Failed to insert locations in MongoDB: {}", e);
+    }
+}
+
+async fn map_locations_to_bson_documents(
+    locations_node: &serde_json::Value,
+    user_id: i64,
+) -> Vec<Document> {
+    let locations = locations_node
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|location_node| convert_json_location_to_bson(location_node, user_id));
+    let locations = futures::future::join_all(locations).await;
+    locations
+}
+
 #[cfg(test)]
 mod tests {
-    // Add your test cases here
+    use super::*;
+    use mongodb::{options::ClientOptions, Client};
+    use serde_json::json;
+    use std::error::Error;
+    use testcontainers::{core::IntoContainerPort, runners::AsyncRunner, GenericImage};
+
+    // Helper function to get a test MongoDB client using testcontainers
+    async fn get_test_mongo_client() -> Client {
+        let container = match GenericImage::new("mongo", "latest")
+            .with_exposed_port(27017.tcp())
+            .start()
+            .await
+        {
+            Ok(c) => c,
+            Err(e) => {
+                panic!("Failed to start MongoDB container: {}", e);
+            }
+        };
+
+        // Get the host and port
+        let port = match container.get_host_port_ipv4(27017).await {
+            Ok(p) => p,
+            Err(e) => {
+                panic!("Failed to get MongoDB container port: {}", e);
+            }
+        };
+
+        let client_uri = format!("mongodb://localhost:{}/", port);
+        let options = ClientOptions::parse(&client_uri).await.unwrap();
+        let client = Client::with_options(options).unwrap();
+
+        client
+    }
+
+    #[tokio::test]
+    async fn test_insert_location_in_mongodb() -> Result<(), Box<dyn Error>> {
+        let client = get_test_mongo_client().await;
+        let user_id = 42;
+        let locations = json!([
+            {
+                "id": 1,
+                "name": "Paris",
+                "latitude": 48.8566,
+                "longitude": 2.3522,
+                "user": "42",
+                "project": "42"
+            },
+            {
+                "id": 2,
+                "name": "London",
+                "latitude": 51.5074,
+                "longitude": 0.1278,
+                "user": "42",
+                "project": "42"
+            }
+        ]);
+        let len = insert_user_locations_in_mongodb(&client, user_id, &locations).await?;
+        assert_eq!(len, 2);
+        Ok(())
+    }
 
     #[test]
     fn test_parse_location_index_with_i32() {

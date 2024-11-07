@@ -27,8 +27,13 @@ pub async fn fetch_location_from_42_to_mongo(
         info!("All locations is get for user_id: {}", user_id);
         return Ok(());
     }
-    ft_mongodb_locations::insert_user_locations_in_mongodb(client, user_id, &location_node).await?;
+    let nb_insert =
+        ft_mongodb_locations::insert_user_locations_in_mongodb(client, user_id, &location_node)
+            .await?;
     insert_user_id_and_page_number(client, user_id, page_number + 1).await?;
-    info!("Locations inserted in MongoDB for user_id: {}", user_id);
+    info!(
+        "{} Locations inserted in MongoDB for user_id: {}",
+        nb_insert, user_id
+    );
     Ok(())
 }
