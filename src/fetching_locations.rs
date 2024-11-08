@@ -23,7 +23,7 @@ pub async fn fetch_location_from_42_to_mongo(
         return Ok(());
     }
     let location_node = location_node?;
-    if location_node.as_array().is_none() {
+    if location_node.as_array().is_none() || location_node.as_array().unwrap().is_empty() {
         info!("All locations is get for user_id: {}", user_id);
         return Ok(());
     }
