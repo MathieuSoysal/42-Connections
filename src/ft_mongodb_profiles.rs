@@ -108,3 +108,30 @@ fn obtain_index(found_doc: Option<Document>) -> u32 {
     };
     current_index
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mongodb::bson::doc;
+
+    #[tokio::test]
+    async fn test_obtain_index() {
+        let found_doc = Some(doc! { "current_index": 42 });
+        let current_index = obtain_index(found_doc);
+        assert_eq!(current_index, 42);
+    }
+
+    #[tokio::test]
+    async fn test_obtain_index_no_doc() {
+        let found_doc = None;
+        let current_index = obtain_index(found_doc);
+        assert_eq!(current_index, 28);
+    }
+
+    #[tokio::test]
+    async fn test_obtain_index_no_current_index() {
+        let found_doc = Some(doc! { "other_field": 42 });
+        let current_index = obtain_index(found_doc);
+        assert_eq!(current_index, 28);
+    }
+}

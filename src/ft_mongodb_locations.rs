@@ -135,13 +135,16 @@ async fn map_locations_to_bson_documents(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mongodb::bson::doc;
     use mongodb::{options::ClientOptions, Client};
     use serde_json::json;
     use std::error::Error;
-    use testcontainers::{core::IntoContainerPort, runners::AsyncRunner, GenericImage};
+    use testcontainers::{
+        core::IntoContainerPort, runners::AsyncRunner, ContainerAsync, GenericImage,
+    };
 
     // Helper function to get a test MongoDB client using testcontainers
-    async fn get_test_mongo_client() -> Client {
+    pub async fn get_test_mongo_client() -> (Client, ContainerAsync<GenericImage>) {
         let container = match GenericImage::new("mongo", "latest")
             .with_exposed_port(27017.tcp())
             .start()
@@ -165,12 +168,23 @@ mod tests {
         let options = ClientOptions::parse(&client_uri).await.unwrap();
         let client = Client::with_options(options).unwrap();
 
-        client
+        let db = client.database("admin");
+        for _ in 0..10 {
+            match db.run_command(doc! {"ping": 1}).await {
+                Ok(_) => break,
+                Err(e) => {
+                    eprintln!("Waiting for MongoDB to be ready: {}", e);
+                    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                }
+            }
+        }
+
+        (client, container)
     }
 
     #[tokio::test]
     async fn test_insert_location_in_mongodb() -> Result<(), Box<dyn Error>> {
-        let client = get_test_mongo_client().await;
+        let (client, container) = get_test_mongo_client().await;
         let user_id = 42;
         let locations = json!([
             {
@@ -192,6 +206,20 @@ mod tests {
         ]);
         let len = insert_user_locations_in_mongodb(&client, user_id, &locations).await?;
         assert_eq!(len, 2);
+        container.stop().await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_an_user_id_and_page_number() -> Result<(), Box<dyn Error>> {
+        let (client, container) = get_test_mongo_client().await;
+        let user_id = 42;
+        let page_number = 1;
+        insert_user_id_and_page_number(&client, user_id, page_number).await?;
+        let (found_user_id, found_page_number) = get_an_user_id_and_page_number(&client).await?;
+        assert_eq!(found_user_id, user_id);
+        assert_eq!(found_page_number, page_number);
+        container.stop().await?;
         Ok(())
     }
 
