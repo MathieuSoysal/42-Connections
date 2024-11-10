@@ -14,10 +14,11 @@ pub mod fetching;
 pub mod fetching_locations;
 pub mod ft_api;
 pub mod ft_mongodb;
-pub mod ft_mongodb_locations;
-pub mod ft_mongodb_profiles;
-pub mod ft_mongodb_mode;
 pub mod ft_mongodb_last_update;
+pub mod ft_mongodb_locations;
+pub mod ft_mongodb_mode;
+pub mod ft_mongodb_profile_indexer;
+pub mod ft_mongodb_profiles;
 
 pub const NB_MINUTES: u32 = 10;
 pub const NB_FETCH: u32 = (NB_MINUTES * 60) / TIME_BETWEEN_REQUESTS;
