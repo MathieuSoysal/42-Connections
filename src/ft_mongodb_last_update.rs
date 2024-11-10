@@ -7,52 +7,43 @@ const DEFAULT_LAST_UPDATE: &str = "2020-01-01T00:00:00Z";
 
 pub async fn get_last_update(client: &Client) -> String {
     let collection: Collection<Document> = client.database("application").collection("last_update");
-    let filter = doc! {};
-    let last_update = collection.find_one(filter).await;
-    if last_update.is_err() {
-        let last_update = get_biggest_update_at_from_profiles(client).await;
-        return last_update.to_string();
-    }
-    let last_update = last_update.unwrap();
+    let last_update = collection.find_one(doc! {}).await;
     match last_update {
-        Some(document) => {
-            let last_update = document.get_str("last_update");
-            match last_update {
-                Ok(last_update) => last_update.to_string(),
-                Err(_) => get_biggest_update_at_from_profiles(client).await,
-            }
-        }
-        None => {
-            let last_update = get_biggest_update_at_from_profiles(client).await;
-            last_update.to_string()
-        }
+        Ok(Some(document)) => document
+            .get_str("last_update")
+            .map(|s| s.to_string())
+            .unwrap_or(get_biggest_update_at_from_profiles(client).await),
+        _ => get_biggest_update_at_from_profiles(client).await,
     }
 }
 
+pub async fn update_last_update(client: &Client) {
+    let collection: Collection<Document> = client.database("application").collection("last_update");
+    let last_update = get_biggest_update_at_from_profiles(client).await;
+    collection
+        .replace_one(
+            doc! {"_id": 1},
+            doc! { "_id": 1, "last_update": last_update },
+        )
+        .upsert(true)
+        .await
+        .unwrap();
+}
+
 async fn get_biggest_update_at_from_profiles(client: &Client) -> String {
-    let database = client.database("42");
-    let collection: Collection<Document> = database.collection("profiles");
+    let collection: Collection<Document> = client.database("42").collection("profiles");
     let last_update = collection
         .find_one(doc! {})
         .sort(doc! { "updated_at": -1 })
         .projection(doc! { "updated_at": 1 })
         .await;
-    if last_update.is_err() {
-        return DEFAULT_LAST_UPDATE.to_string();
-    }
-    let last_update = last_update.unwrap();
-    match last_update {
-        Some(document) => {
-            let last_update = document.get_str("updated_at");
-            match last_update {
-                Ok(last_update) => last_update.to_string(),
-                Err(_) => DEFAULT_LAST_UPDATE.to_string(),
-            }
-        }
-        None => {
-            let last_update = DEFAULT_LAST_UPDATE;
-            last_update.to_string()
-        }
+    if let Ok(Some(document)) = last_update {
+        document
+            .get_str("updated_at")
+            .unwrap_or(DEFAULT_LAST_UPDATE)
+            .to_string()
+    } else {
+        DEFAULT_LAST_UPDATE.to_string()
     }
 }
 
@@ -145,6 +136,36 @@ mod tests {
 
         // Assert the expected result
         assert_eq!(last_update, "2023-01-03T00:00:00Z");
+        container.stop().await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_update_last_update() -> Result<(), Box<dyn Error>> {
+        // Start the Docker daemon
+        let (client, container) = get_test_mongo_client().await;
+
+        // Insert test data into the '42.profiles' collection
+        let collection: Collection<Document> = client.database("42").collection("profiles");
+        collection
+            .insert_many(vec![
+                doc! { "updated_at": "2023-01-02T00:00:00Z" },
+                doc! { "updated_at": "2023-01-03T00:00:00Z" },
+                doc! { "updated_at": "2023-01-01T00:00:00Z" },
+            ])
+            .await?;
+
+        // Call the function to test
+        update_last_update(&client).await;
+
+        // Assert the expected result
+        let collection: Collection<Document> =
+            client.database("application").collection("last_update");
+        let last_update = collection.find_one(doc! {}).await?;
+        assert_eq!(
+            last_update.unwrap().get_str("last_update").unwrap(),
+            "2023-01-03T00:00:00Z"
+        );
         container.stop().await?;
         Ok(())
     }
