@@ -78,6 +78,46 @@ pub async fn request_location(
     Ok(response_json)
 }
 
+pub async fn request_event_participations(
+    token: &AccessToken,
+    user_id: &i64,
+    page_number: &i32,
+) -> Result<serde_json::Value, Box<dyn Error>> {
+    debug!(
+        "Requesting event participations from API for user_id: {}",
+        user_id
+    );
+    let url = format!(
+        "https://api.intra.42.fr/v2/users/{}/events?page[size]=100&page[number]={}",
+        user_id, page_number
+    );
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&url)
+        .header(AUTHORIZATION, format!("Bearer {}", token.secret()))
+        .send()
+        .await
+        .map_err(|e| {
+            error!("HTTP request failed for user_id {}: {}", user_id, e);
+            e
+        })?;
+    if response.status() != 404 && response.status() != 200 {
+        response.error_for_status_ref().map_err(|e| {
+            error!(
+                "Received error status from API for user_id {}: {}",
+                user_id, e
+            );
+            e
+        })?;
+    }
+    let response_json: serde_json::Value = response.json().await.map_err(|e| {
+        error!("Failed to parse JSON for user_id {}: {}", user_id, e);
+        e
+    })?;
+    debug!("Received event from API for user_id: {}", user_id);
+    Ok(response_json)
+}
+
 pub async fn generate_access_token(
     secret_uid: &str,
     secret_key: &str,

@@ -1,13 +1,10 @@
 #![feature(test)]
 extern crate test;
 
-use fetching::{
-    fetch_locations_from_42_to_mongo, fetch_profiles_from_42_to_mongodb, TIME_BETWEEN_REQUESTS,
-};
+use fetching::TIME_BETWEEN_REQUESTS;
 use fetching_event_participation::double_fetch_events_participation_from_42_to_mongo;
 use ft_api::generate_access_token;
 use ft_mongodb_mode::Mode;
-use ft_mongodb_profiles::fetch_current_index;
 use log::{debug, error, info};
 use oauth2::AccessToken;
 use std::{env, error::Error};
@@ -36,20 +33,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     info!("Starting 42 analytics.");
     let (client, api_key_1, api_key_2) = initialize_variables().await?;
-    match CURRENT_MODE {
-        Mode::Profiles => {
-            let user_id = fetch_current_index(&client, NB_FETCH * 2).await.unwrap();
-            fetch_profiles_from_42_to_mongodb(&client, user_id, &api_key_1, &api_key_2).await?
-        }
-        Mode::Locations => {
-            fetch_locations_from_42_to_mongo(&client, &api_key_1, &api_key_2).await?
-        }
-        Mode::UserEvents => {
-            double_fetch_events_participation_from_42_to_mongo(&client, &api_key_1, &api_key_2)
-                .await?
-        }
-        _ => (),
-    }
+    double_fetch_events_participation_from_42_to_mongo(&client, &api_key_1, &api_key_2).await?;
     info!("42 analytics finished.");
     Ok(())
 }
