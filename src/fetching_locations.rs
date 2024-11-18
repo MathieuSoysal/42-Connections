@@ -4,22 +4,25 @@ use mongodb::Client;
 use oauth2::AccessToken;
 
 use crate::ft_api;
+use crate::ft_mongodb_app_indexor::{
+    get_an_user_id_and_page_number, insert_user_id_and_page_number,
+};
 use crate::ft_mongodb_locations;
-use crate::ft_mongodb_locations::insert_user_id_and_page_number;
+
+const COLLECTION_NAME: &str = "location_index";
 
 pub async fn fetch_location_from_42_to_mongo(
     client: &Client,
     token: &AccessToken,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let (user_id, page_number) =
-        ft_mongodb_locations::get_an_user_id_and_page_number(client).await?;
+    let (user_id, page_number) = get_an_user_id_and_page_number(client, COLLECTION_NAME).await?;
     let location_node = ft_api::request_location(&token, &user_id, &page_number).await;
     if location_node.is_err() {
         error!(
             "Location failed for user_id: {} page_number : {}",
             user_id, page_number
         );
-        insert_user_id_and_page_number(client, user_id, page_number).await?;
+        insert_user_id_and_page_number(client, user_id, page_number, COLLECTION_NAME).await?;
         return Ok(());
     }
     let location_node = location_node?;
@@ -41,6 +44,6 @@ pub async fn fetch_location_from_42_to_mongo(
         );
         return Ok(());
     }
-    insert_user_id_and_page_number(client, user_id, page_number + 1).await?;
+    insert_user_id_and_page_number(client, user_id, page_number + 1, COLLECTION_NAME).await?;
     Ok(())
 }

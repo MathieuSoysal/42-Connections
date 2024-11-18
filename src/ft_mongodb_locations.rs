@@ -1,10 +1,7 @@
 use std::error::Error;
 
-use log::{debug, error, info};
-use mongodb::{
-    bson::{doc, Bson, Document},
-    Client, Collection,
-};
+use log::{error, info};
+use mongodb::{bson::Document, Client};
 
 pub async fn insert_user_locations_in_mongodb(
     client: &Client,
@@ -16,57 +13,6 @@ pub async fn insert_user_locations_in_mongodb(
     let nb_locations = locations.len();
     insert_user_locations_into_mongodb(client, locations).await;
     Ok(nb_locations)
-}
-
-pub async fn get_an_user_id_and_page_number(client: &Client) -> Result<(i64, i32), Box<dyn Error>> {
-    let collection: Collection<Document> =
-        client.database("application").collection("locations_index");
-    let result = collection.find_one_and_delete(doc! {}).await.or_else(|e| {
-        error!("Failed to find a location index from MongoDB: {}", e);
-        error!("Maybe all locations have been fetched.");
-        Err(e)
-    })?;
-    if let Some(doc) = result {
-        let (user_id, page_number) = match parse_location_index(doc) {
-            Ok(value) => value,
-            Err(value) => return value,
-        };
-        info!(
-            "Current location index is for user {} and page {}",
-            user_id, page_number
-        );
-        return Ok((user_id, page_number));
-    }
-    error!("Failed to fetch current index from MongoDB.");
-    Err("Failed to fetch current index from MongoDB.".into())
-}
-
-pub async fn insert_user_id_and_page_number(
-    client: &Client,
-    user_id: i64,
-    page_number: i32,
-) -> Result<(), Box<dyn Error>> {
-    let collection: Collection<Document> =
-        client.database("application").collection("locations_index");
-    collection
-        .replace_one(
-            doc! {"_id": user_id},
-            doc! {"_id": user_id, "page_number": page_number},
-        )
-        .upsert(true)
-        .await
-        .or_else(|e| {
-            error!(
-                "Failed to insert location index for user {} in MongoDB: {}",
-                user_id, e
-            );
-            Err(e)
-        })?;
-    info!(
-        "Location index for user {} and page {} inserted in MongoDB.",
-        user_id, page_number
-    );
-    Ok(())
 }
 
 async fn convert_json_location_to_bson(
@@ -86,25 +32,6 @@ async fn convert_json_location_to_bson(
         error!("Expected a document but got a different BSON type.");
         panic!("Expected a document but got a different BSON type.");
     }
-}
-
-fn parse_location_index(doc: Document) -> Result<(i64, i32), Result<(i64, i32), Box<dyn Error>>> {
-    debug!("Found a location index {:?} in MongoDB.", doc);
-    let user_id = match doc.get("_id") {
-        Some(Bson::Int64(id)) => *id,
-        Some(Bson::Int32(id)) => *id as i64,
-        _ => return Err(Err("Field '_id' does not have the expected type".into())),
-    };
-    let page_number = match doc.get("page_number") {
-        Some(Bson::Int32(page)) => *page,
-        Some(Bson::Int64(page)) => *page as i32,
-        _ => {
-            return Err(Err(
-                "Field 'page_number' does not have the expected type".into()
-            ))
-        }
-    };
-    Ok((user_id, page_number))
 }
 
 async fn insert_user_locations_into_mongodb(client: &Client, locations: Vec<Document>) {
@@ -208,32 +135,5 @@ mod tests {
         assert_eq!(len, 2);
         container.stop().await?;
         Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_get_an_user_id_and_page_number() -> Result<(), Box<dyn Error>> {
-        let (client, container) = get_test_mongo_client().await;
-        let user_id = 42;
-        let page_number = 1;
-        insert_user_id_and_page_number(&client, user_id, page_number).await?;
-        let (found_user_id, found_page_number) = get_an_user_id_and_page_number(&client).await?;
-        assert_eq!(found_user_id, user_id);
-        assert_eq!(found_page_number, page_number);
-        container.stop().await?;
-        Ok(())
-    }
-
-    #[test]
-    fn test_parse_location_index_with_i32() {
-        use super::*;
-        let doc = doc! { "_id": 42 as i32, "page_number": 1 };
-        assert_eq!(parse_location_index(doc).unwrap(), (42, 1));
-    }
-
-    #[test]
-    fn test_parse_location_index_with_i64() {
-        use super::*;
-        let doc = doc! { "_id": 42 as i64, "page_number": 1 };
-        assert_eq!(parse_location_index(doc).unwrap(), (42, 1));
     }
 }

@@ -29,6 +29,18 @@ impl Mode {
     }
 }
 
+pub fn get_mode_from_str(mode: &str) -> Mode {
+    match mode {
+        "profiles_indexing" => Mode::ProfilesIndexing,
+        "profiles" => Mode::Profiles,
+        "locations_indexing" => Mode::LocationsIndexing,
+        "locations" => Mode::Locations,
+        "user_events" => Mode::UserEvents,
+        "events" => Mode::Events,
+        _ => Mode::ProfilesIndexing,
+    }
+}
+
 pub async fn get_current_mode_from_mongo(client: &Client) -> Result<Mode, Box<dyn Error>> {
     info!("Fetching current mode from MongoDB.");
     let collection: Collection<Document> = client.database("application").collection("mode");
@@ -64,18 +76,11 @@ async fn insert_mode_in_mongo(client: &Client, mode: Mode) -> Result<(), Box<dyn
 fn convert_to_mode(found_doc: Option<Document>) -> Mode {
     match found_doc {
         Some(doc) => {
-            let mode = doc.get("mode").unwrap();
-            match mode {
-                Bson::String(mode) => match mode.as_str() {
-                    "profiles_indexing" => Mode::ProfilesIndexing,
-                    "profiles" => Mode::Profiles,
-                    "locations_indexing" => Mode::LocationsIndexing,
-                    "locations" => Mode::Locations,
-                    "user_events" => Mode::UserEvents,
-                    "events" => Mode::Events,
-                    _ => Mode::ProfilesIndexing,
-                },
-                _ => Mode::Profiles,
+            let bson_mode = doc.get("mode").unwrap();
+            if let Bson::String(mode) = bson_mode {
+                get_mode_from_str(mode)
+            } else {
+                Mode::Profiles
             }
         }
         None => Mode::Profiles,
@@ -154,6 +159,6 @@ mod tests {
         update_mode_in_mongo(&client).await.unwrap();
         let mode = get_current_mode_from_mongo(&client).await.unwrap();
         container.stop().await.unwrap();
-        assert_eq!(mode, Mode::Locations);
+        assert_eq!(mode, Mode::LocationsIndexing);
     }
 }

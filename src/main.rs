@@ -4,16 +4,21 @@ extern crate test;
 use fetching::{
     fetch_locations_from_42_to_mongo, fetch_profiles_from_42_to_mongodb, TIME_BETWEEN_REQUESTS,
 };
+use fetching_event_participation::double_fetch_events_participation_from_42_to_mongo;
 use ft_api::generate_access_token;
+use ft_mongodb_mode::Mode;
 use ft_mongodb_profiles::fetch_current_index;
 use log::{debug, error, info};
 use oauth2::AccessToken;
 use std::{env, error::Error};
 
 pub mod fetching;
+pub mod fetching_event_participation;
 pub mod fetching_locations;
 pub mod ft_api;
 pub mod ft_mongodb;
+pub mod ft_mongodb_app_indexor;
+pub mod ft_mongodb_events;
 pub mod ft_mongodb_last_update;
 pub mod ft_mongodb_locations;
 pub mod ft_mongodb_mode;
@@ -24,16 +29,26 @@ pub const NB_MINUTES: u32 = 10;
 pub const NB_FETCH: u32 = (NB_MINUTES * 60) / TIME_BETWEEN_REQUESTS;
 pub const MAX_INDEX: u32 = 207864;
 
+pub const CURRENT_MODE: Mode = Mode::UserEvents;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     info!("Starting 42 analytics.");
     let (client, api_key_1, api_key_2) = initialize_variables().await?;
-    let user_id = fetch_current_index(&client, NB_FETCH * 2).await.unwrap();
-    if user_id > MAX_INDEX {
-        fetch_locations_from_42_to_mongo(&client, &api_key_1, &api_key_2).await?;
-    } else {
-        fetch_profiles_from_42_to_mongodb(&client, user_id, &api_key_1, &api_key_2).await?;
+    match CURRENT_MODE {
+        Mode::Profiles => {
+            let user_id = fetch_current_index(&client, NB_FETCH * 2).await.unwrap();
+            fetch_profiles_from_42_to_mongodb(&client, user_id, &api_key_1, &api_key_2).await?
+        }
+        Mode::Locations => {
+            fetch_locations_from_42_to_mongo(&client, &api_key_1, &api_key_2).await?
+        }
+        Mode::UserEvents => {
+            double_fetch_events_participation_from_42_to_mongo(&client, &api_key_1, &api_key_2)
+                .await?
+        }
+        _ => (),
     }
     info!("42 analytics finished.");
     Ok(())
