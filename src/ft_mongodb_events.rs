@@ -22,7 +22,7 @@ fn convert_json_event_to_bson(event_node: &serde_json::Value, user_id: i64) -> D
     let bson_value = mongodb::bson::to_bson(event_node).unwrap();
     if let mongodb::bson::Bson::Document(doc) = bson_value {
         return doc! {
-            "_id": doc.get_i64("id").unwrap(),
+            "event_id": doc.get_i64("id").unwrap(),
             "user_id": user_id,
         };
     } else {
@@ -39,7 +39,7 @@ async fn insert_user_events_into_mongodb(client: &Client, user_id: i64, events: 
     let colletion = client
         .database("42")
         .collection::<Document>("event_participations");
-    let query = doc! {"user_id": user_id};
+    let query = doc! {"_id": user_id};
     let update = doc! {
         "$push": {
             "events": {
