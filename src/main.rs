@@ -7,7 +7,8 @@ use ft_api::generate_access_token;
 use ft_mongodb_mode::Mode;
 use log::{debug, error, info};
 use oauth2::AccessToken;
-use std::{env, error::Error};
+use tokio::time::{sleep_until, Instant};
+use std::{env, error::Error, time::Duration};
 
 pub mod fetching;
 pub mod fetching_event_participation;
@@ -34,7 +35,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Starting 42 analytics.");
     let (client, api_key_1, api_key_2) = initialize_variables().await?;
     for _ in 0..NB_FETCH {
+        let current = Instant::now();
         double_fetch_events_participation_from_42_to_mongo(&client, &api_key_1, &api_key_2).await?;
+        sleep_until(current + Duration::from_secs(TIME_BETWEEN_REQUESTS.into())).await;
     }
     info!("42 analytics finished.");
     Ok(())

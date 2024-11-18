@@ -11,7 +11,7 @@ use crate::{
     NB_FETCH,
 };
 
-pub const TIME_BETWEEN_REQUESTS: u32 = 4;
+pub const TIME_BETWEEN_REQUESTS: u32 = 3;
 
 pub async fn fetch_profil_from_42_to_mongo(
     client: &Client,
