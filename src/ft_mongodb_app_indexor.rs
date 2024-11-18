@@ -31,7 +31,7 @@ pub async fn get_an_user_id_and_page_number(
         );
         return Ok((user_id, page_number));
     }
-    error!("Failed to fetch current index from MongoDB.");
+    error!("Failed to fetch current index in collection {} from MongoDB.", collection_name);
     Err("Failed to fetch current index from MongoDB.".into())
 }
 
