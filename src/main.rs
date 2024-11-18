@@ -33,7 +33,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     info!("Starting 42 analytics.");
     let (client, api_key_1, api_key_2) = initialize_variables().await?;
-    double_fetch_events_participation_from_42_to_mongo(&client, &api_key_1, &api_key_2).await?;
+    for _ in 0..NB_FETCH {
+        double_fetch_events_participation_from_42_to_mongo(&client, &api_key_1, &api_key_2).await?;
+    }
     info!("42 analytics finished.");
     Ok(())
 }
