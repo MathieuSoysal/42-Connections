@@ -6,33 +6,57 @@ use mongodb::{
     Client, Collection,
 };
 
+const DATABASE_NAME: &str = "application";
+
+pub async fn get_an_id(client: &Client, collection_name: &str) -> Result<i64, Box<dyn Error>> {
+    let doc = find_one_and_delete(client, collection_name).await?;
+    let user_id = match doc.get("_id") {
+        Some(Bson::Int64(id)) => *id,
+        Some(Bson::Int32(id)) => *id as i64,
+        _ => {
+            return Err("Field '_id' does not have the expected type".into());
+        }
+    };
+    info!("Current index is for user {}", user_id);
+    return Ok(user_id);
+}
+
+pub async fn insert_id(
+    client: &Client,
+    user_id: i64,
+    collection_name: &str,
+) -> Result<(), Box<dyn Error>> {
+    let collection: Collection<Document> =
+        client.database(DATABASE_NAME).collection(collection_name);
+    collection
+        .replace_one(doc! {"_id": user_id}, doc! {"_id": user_id})
+        .upsert(true)
+        .await
+        .or_else(|e| {
+            error!(
+                "Failed to insert index for user {} in MongoDB: {}",
+                user_id, e
+            );
+            Err(e)
+        })?;
+    info!("Index for user {} inserted in MongoDB.", user_id);
+    Ok(())
+}
+
 pub async fn get_an_user_id_and_page_number(
     client: &Client,
     collection_name: &str,
 ) -> Result<(i64, i32), Box<dyn Error>> {
-    let collection: Collection<Document> =
-        client.database("application").collection(collection_name);
-    let result = collection.find_one_and_delete(doc! {}).await.or_else(|e| {
-        error!(
-            "Failed to find a index in {} from MongoDB: {}",
-            collection_name, e
-        );
-        error!("Maybe all index have been fetched.");
-        Err(e)
-    })?;
-    if let Some(doc) = result {
-        let (user_id, page_number) = match parse_user_page_doc(doc) {
-            Ok(value) => value,
-            Err(value) => return value,
-        };
-        info!(
-            "Current index is for user {} and page {}",
-            user_id, page_number
-        );
-        return Ok((user_id, page_number));
-    }
-    error!("Failed to fetch current index in collection {} from MongoDB.", collection_name);
-    Err("Failed to fetch current index from MongoDB.".into())
+    let result = find_one_and_delete(client, collection_name).await?;
+    let (user_id, page_number) = match parse_user_page_doc(result) {
+        Ok(value) => value,
+        Err(value) => return value,
+    };
+    info!(
+        "Current index is for user {} and page {}",
+        user_id, page_number
+    );
+    return Ok((user_id, page_number));
 }
 
 pub async fn insert_user_id_and_page_number(
@@ -42,7 +66,7 @@ pub async fn insert_user_id_and_page_number(
     collection_name: &str,
 ) -> Result<(), Box<dyn Error>> {
     let collection: Collection<Document> =
-        client.database("application").collection(collection_name);
+        client.database(DATABASE_NAME).collection(collection_name);
     collection
         .replace_one(
             doc! {"_id": user_id},
@@ -62,6 +86,27 @@ pub async fn insert_user_id_and_page_number(
         user_id, page_number
     );
     Ok(())
+}
+
+async fn find_one_and_delete(
+    client: &Client,
+    collection_name: &str,
+) -> Result<Document, Box<dyn Error>> {
+    let collection: Collection<Document> =
+        client.database(DATABASE_NAME).collection(collection_name);
+    let result = collection.find_one_and_delete(doc! {}).await.or_else(|e| {
+        error!("Maybe all index have been fetched.");
+        error!(
+            "Failed to find a index in {} from MongoDB: {}",
+            collection_name, e
+        );
+        Err(e)
+    })?;
+    if let Some(doc) = result {
+        Ok(doc)
+    } else {
+        Err("Failed to fetch current index from MongoDB.".into())
+    }
 }
 
 fn parse_user_page_doc(doc: Document) -> Result<(i64, i32), Result<(i64, i32), Box<dyn Error>>> {

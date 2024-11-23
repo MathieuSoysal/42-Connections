@@ -7,7 +7,7 @@ use crate::ft_api;
 use crate::ft_mongodb_app_indexor::{
     get_an_user_id_and_page_number, insert_user_id_and_page_number,
 };
-use crate::ft_mongodb_events;
+use crate::ft_mongodb_events_participation;
 
 const COLLECTION_NAME: &str = "events_participation_index";
 
@@ -44,7 +44,7 @@ pub async fn fetch_events_participation_from_42_to_mongo(
         return Ok(());
     }
     let nb_insert =
-        ft_mongodb_events::insert_user_events_in_mongodb(client, user_id, &event_node)
+        ft_mongodb_events_participation::insert_user_events_in_mongodb(client, user_id, &event_node)
             .await?;
     info!(
         "{} events inserted in MongoDB for user_id: {}",

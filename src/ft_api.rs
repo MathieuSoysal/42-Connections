@@ -7,23 +7,15 @@ use reqwest::header::AUTHORIZATION;
 use std::error::Error;
 
 const TOKEN_URL: &str = "https://api.intra.42.fr/oauth/token";
+const API_URL: &str = "https://api.intra.42.fr/v2";
 
 pub async fn request_profil(
     token: &AccessToken,
     user_id: &u32,
 ) -> Result<serde_json::Value, Box<dyn Error>> {
     debug!("Requesting profil from API for user_id: {}", user_id);
-    let url = format!("https://api.intra.42.fr/v2/users/{}", user_id);
-    let client = reqwest::Client::new();
-    let response = client
-        .get(&url)
-        .header(AUTHORIZATION, format!("Bearer {}", token.secret()))
-        .send()
-        .await
-        .map_err(|e| {
-            error!("HTTP request failed for user_id {}: {}", user_id, e);
-            e
-        })?;
+    let url = format!("{}/users/{}", API_URL, user_id);
+    let response = send_http_request(&url, token).await?;
     if response.status() != 404 && response.status() != 200 {
         response.error_for_status_ref().map_err(|e| {
             error!(
@@ -48,19 +40,10 @@ pub async fn request_location(
 ) -> Result<serde_json::Value, Box<dyn Error>> {
     debug!("Requesting location from API for user_id: {}", user_id);
     let url = format!(
-        "https://api.intra.42.fr/v2/users/{}/locations?page[size]=100&page[number]={}",
-        user_id, page_number
+        "{}/users/{}/locations?page[size]=100&page[number]={}",
+        API_URL, user_id, page_number
     );
-    let client = reqwest::Client::new();
-    let response = client
-        .get(&url)
-        .header(AUTHORIZATION, format!("Bearer {}", token.secret()))
-        .send()
-        .await
-        .map_err(|e| {
-            error!("HTTP request failed for user_id {}: {}", user_id, e);
-            e
-        })?;
+    let response = send_http_request(&url, token).await?;
     if response.status() != 404 && response.status() != 200 {
         response.error_for_status_ref().map_err(|e| {
             error!(
@@ -88,19 +71,10 @@ pub async fn request_event_participations(
         user_id
     );
     let url = format!(
-        "https://api.intra.42.fr/v2/users/{}/events?page[size]=100&page[number]={}",
-        user_id, page_number
+        "{}/users/{}/events?page[size]=100&page[number]={}",
+        API_URL, user_id, page_number
     );
-    let client = reqwest::Client::new();
-    let response = client
-        .get(&url)
-        .header(AUTHORIZATION, format!("Bearer {}", token.secret()))
-        .send()
-        .await
-        .map_err(|e| {
-            error!("HTTP request failed for user_id {}: {}", user_id, e);
-            e
-        })?;
+    let response = send_http_request(&url, token).await?;
     if response.status() != 404 && response.status() != 200 {
         response.error_for_status_ref().map_err(|e| {
             error!(
@@ -115,6 +89,30 @@ pub async fn request_event_participations(
         e
     })?;
     debug!("Received event from API for user_id: {}", user_id);
+    Ok(response_json)
+}
+
+pub async fn request_event(
+    token: &AccessToken,
+    event_id: &i64,
+) -> Result<serde_json::Value, Box<dyn Error>> {
+    debug!("Requesting event from API for event_id: {}", event_id);
+    let url = format!("{}/events/{}", API_URL, event_id);
+    let response = send_http_request(&url, token).await?;
+    if response.status() != 404 && response.status() != 200 {
+        response.error_for_status_ref().map_err(|e| {
+            error!(
+                "Received error status from API for event_id {}: {}",
+                event_id, e
+            );
+            e
+        })?;
+    }
+    let response_json: serde_json::Value = response.json().await.map_err(|e| {
+        error!("Failed to parse JSON for event_id {}: {}", event_id, e);
+        e
+    })?;
+    debug!("Received event from API for event_id: {}", event_id);
     Ok(response_json)
 }
 
@@ -137,4 +135,21 @@ pub async fn generate_access_token(
             e
         })?;
     Ok(token_result.access_token().clone())
+}
+
+async fn send_http_request(
+    url: &str,
+    token: &AccessToken,
+) -> Result<reqwest::Response, Box<dyn Error>> {
+    let client = reqwest::Client::new();
+    let response = client
+        .get(url)
+        .header(AUTHORIZATION, format!("Bearer {}", token.secret()))
+        .send()
+        .await
+        .map_err(|e| {
+            error!("HTTP request failed for url {}: {}", url, e);
+            e
+        })?;
+    Ok(response)
 }

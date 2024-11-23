@@ -1,8 +1,8 @@
 #![feature(test)]
 extern crate test;
 
-use fetching::TIME_BETWEEN_REQUESTS;
-use fetching_event_participation::double_fetch_events_participation_from_42_to_mongo;
+use fetching_event::double_fetch_event_from_42_to_mongo;
+use fetching_profile::TIME_BETWEEN_REQUESTS;
 use ft_api::generate_access_token;
 use ft_mongodb_mode::Mode;
 use log::{debug, error, info};
@@ -10,18 +10,20 @@ use oauth2::AccessToken;
 use tokio::time::{sleep_until, Instant};
 use std::{env, error::Error, time::Duration};
 
-pub mod fetching;
+pub mod fetching_profile;
 pub mod fetching_event_participation;
 pub mod fetching_locations;
+pub mod fetching_event;
 pub mod ft_api;
 pub mod ft_mongodb;
 pub mod ft_mongodb_app_indexor;
-pub mod ft_mongodb_events;
+pub mod ft_mongodb_events_participation;
 pub mod ft_mongodb_last_update;
 pub mod ft_mongodb_locations;
 pub mod ft_mongodb_mode;
 pub mod ft_mongodb_profile_indexer;
 pub mod ft_mongodb_profiles;
+pub mod ft_mongodb_events;
 
 pub const NB_MINUTES: u32 = 10;
 pub const NB_FETCH: u32 = (NB_MINUTES * 60) / TIME_BETWEEN_REQUESTS;
@@ -36,7 +38,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (client, api_key_1, api_key_2) = initialize_variables().await?;
     for _ in 0..NB_FETCH {
         let current = Instant::now();
-        double_fetch_events_participation_from_42_to_mongo(&client, &api_key_1, &api_key_2).await?;
+        double_fetch_event_from_42_to_mongo(&client, &api_key_1, &api_key_2).await?;
         sleep_until(current + Duration::from_secs(TIME_BETWEEN_REQUESTS.into())).await;
     }
     info!("42 analytics finished.");
