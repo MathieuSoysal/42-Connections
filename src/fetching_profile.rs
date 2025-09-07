@@ -6,8 +6,7 @@ use oauth2::AccessToken;
 use tokio::time::{Instant, sleep_until};
 
 use crate::{
-    NB_FETCH, fetching_locations, ft_api,
-    ft_mongodb_profiles::{self, insert_failed_id_in_mongo, insert_ignoring_id_in_mongo},
+    fetching_locations, ft_api, ft_mongodb_app_new_profile_index, ft_mongodb_profiles::{self, insert_failed_id_in_mongo, insert_ignoring_id_in_mongo}, NB_FETCH
 };
 
 pub const TIME_BETWEEN_REQUESTS: u32 = 3;
@@ -65,6 +64,27 @@ pub async fn fetch_profiles_from_42_to_mongodb(
         futures::future::try_join(
             fetch_profil_from_42_to_mongo(&client, i.clone(), &api_key_2),
             fetch_profil_from_42_to_mongo(&client, i.clone() + 1, &api_key_1),
+        )
+        .await?;
+        i += 2;
+        sleep_until(current + Duration::from_secs(TIME_BETWEEN_REQUESTS.into())).await;
+    }
+    Ok(())
+}
+
+pub async fn fetch_and_update_profiles_from_42_to_mongodb(
+    client: &Client,
+    api_key_1: &AccessToken,
+    api_key_2: &AccessToken,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut i = 1;
+    while i < 1 + (NB_FETCH * 2) {
+        let current = Instant::now();
+        let id1 = ft_mongodb_app_new_profile_index::get_a_profile_id(client).await?;
+        let id2 = ft_mongodb_app_new_profile_index::get_a_profile_id(client).await?;
+        futures::future::try_join(
+            fetch_profil_from_42_to_mongo(&client, id1 as u32, &api_key_2),
+            fetch_profil_from_42_to_mongo(&client, id2 as u32, &api_key_1),
         )
         .await?;
         i += 2;

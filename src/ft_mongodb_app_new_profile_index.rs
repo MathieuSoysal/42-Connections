@@ -41,3 +41,27 @@ pub async fn insert_profile_ids_in_mongo(
     info!("Inserted {} profiles IDs in MongoDB.", nb_profiles);
     Ok(nb_profiles)
 }
+
+pub async fn get_a_profile_id(
+    client: &Client,
+) -> Result<i64, Box<dyn Error>> {
+    let collection = client
+        .database("application")
+        .collection::<Document>("profile_index_to_be_updated");
+    collection.find_one_and_delete(doc! {}).await
+        .or_else(|e| {
+            error!("Failed to fetch a profile ID from MongoDB: {}", e);
+            Err(e)
+        })
+        .map(|opt_doc| {
+            opt_doc.and_then(|doc| doc.get_i64("_id").ok())
+        })
+        .map_err(|e| e.into())
+        .and_then(|opt_id| {
+            opt_id.ok_or_else(|| {
+                let err_msg = "No profile ID found in MongoDB.";
+                error!("{}", err_msg);
+                err_msg.into()
+            })
+        })
+}

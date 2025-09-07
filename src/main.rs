@@ -1,4 +1,3 @@
-use fetching_event::double_fetch_event_from_42_to_mongo;
 use fetching_profile::TIME_BETWEEN_REQUESTS;
 use ft_api::generate_access_token;
 use ft_mongodb_mode::Mode;
@@ -37,19 +36,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     info!("Starting 42 analytics.");
     let (client, api_key_1, api_key_2) = initialize_variables().await?;
-    let mut i = 1;
-    loop {
-        let current = Instant::now();
-        if fetch_profils_ids_from_42_to_mongo(&client, &api_key_1, &i).await? < 99 {
-            break;
-        }
-        i += 1;
-        if fetch_profils_ids_from_42_to_mongo(&client, &api_key_2, &i).await? < 99 {
-            break;
-        }
-        i += 1;
-        sleep_until(current + Duration::from_secs(TIME_BETWEEN_REQUESTS.into())).await;
-    }
+    fetching_profile::fetch_and_update_profiles_from_42_to_mongodb(&client, &api_key_1, &api_key_2).await?;
     info!("42 analytics finished.");
     Ok(())
 }

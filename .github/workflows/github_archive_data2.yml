@@ -1,8 +1,8 @@
 name: Archiving Data for Minute 2
 
 on:
-  schedule:
-    - cron: '*/11 * * * *'        # Runs every 5 minute
+  # schedule:
+  #   - cron: '*/11 * * * *'        # Runs every 5 minute
   workflow_dispatch:            # Allows manual triggering
 
 jobs:

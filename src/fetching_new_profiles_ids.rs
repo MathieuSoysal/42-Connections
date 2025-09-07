@@ -1,9 +1,7 @@
-use std::{f32::consts::E, time::Duration};
 
 use log::{info, warn};
 use mongodb::Client;
 use oauth2::AccessToken;
-use tokio::time::{Instant, sleep_until};
 
 use crate::{ft_api, ft_mongodb_app_new_profile_index};
 
