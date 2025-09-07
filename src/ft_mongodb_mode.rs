@@ -2,8 +2,8 @@ use std::error::Error;
 
 use log::{debug, info};
 use mongodb::{
-    bson::{doc, Bson, Document},
     Client, Collection,
+    bson::{Bson, Document, doc},
 };
 
 #[derive(Debug, PartialEq)]
@@ -102,9 +102,9 @@ fn get_next_mode(current_mode: Mode) -> Mode {
 mod tests {
     use super::*;
     use mongodb::bson::doc;
-    use mongodb::{options::ClientOptions, Client};
+    use mongodb::{Client, options::ClientOptions};
     use testcontainers::{
-        core::IntoContainerPort, runners::AsyncRunner, ContainerAsync, GenericImage,
+        ContainerAsync, GenericImage, core::IntoContainerPort, runners::AsyncRunner,
     };
 
     pub async fn get_test_mongo_client() -> (Client, ContainerAsync<GenericImage>) {

@@ -1,5 +1,5 @@
 use log::{error, info};
-use mongodb::{bson::doc, options::ClientOptions, Client};
+use mongodb::{Client, bson::doc, options::ClientOptions};
 
 pub async fn connect_to_mongodb(mongodb_uri: &str) -> Client {
     info!("Connecting to MongoDB at {}", mongodb_uri);

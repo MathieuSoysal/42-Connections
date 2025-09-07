@@ -2,8 +2,8 @@ use std::error::Error;
 
 use log::{debug, error, info, warn};
 use mongodb::{
-    bson::{doc, Bson, Document},
     Client, Collection,
+    bson::{Bson, Document, doc},
 };
 
 pub async fn insert_profile_in_mongo(

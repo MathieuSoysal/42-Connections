@@ -2,8 +2,8 @@ use std::error::Error;
 
 use log::{error, info};
 use mongodb::{
-    bson::{doc, Document},
     Client,
+    bson::{Document, doc},
 };
 
 const DATABASE_NAME: &str = "42";

@@ -7,23 +7,23 @@ use ft_api::generate_access_token;
 use ft_mongodb_mode::Mode;
 use log::{debug, error, info};
 use oauth2::AccessToken;
-use tokio::time::{sleep_until, Instant};
 use std::{env, error::Error, time::Duration};
+use tokio::time::{Instant, sleep_until};
 
-pub mod fetching_profile;
+pub mod fetching_event;
 pub mod fetching_event_participation;
 pub mod fetching_locations;
-pub mod fetching_event;
+pub mod fetching_profile;
 pub mod ft_api;
 pub mod ft_mongodb;
 pub mod ft_mongodb_app_indexor;
+pub mod ft_mongodb_events;
 pub mod ft_mongodb_events_participation;
 pub mod ft_mongodb_last_update;
 pub mod ft_mongodb_locations;
 pub mod ft_mongodb_mode;
 pub mod ft_mongodb_profile_indexer;
 pub mod ft_mongodb_profiles;
-pub mod ft_mongodb_events;
 
 pub const NB_MINUTES: u32 = 10;
 pub const NB_FETCH: u32 = (NB_MINUTES * 60) / TIME_BETWEEN_REQUESTS;
@@ -45,8 +45,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn initialize_variables(
-) -> Result<(mongodb::Client, AccessToken, AccessToken), Box<dyn Error>> {
+async fn initialize_variables()
+-> Result<(mongodb::Client, AccessToken, AccessToken), Box<dyn Error>> {
     let mongodb_uri = get_var_env("MONGODB_URI");
     let client = ft_mongodb::connect_to_mongodb(&mongodb_uri).await;
     let secret_key_profil = generate_access_token(

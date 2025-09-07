@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use log::{error, info};
-use mongodb::{bson::Document, Client};
+use mongodb::{Client, bson::Document};
 
 pub async fn insert_user_locations_in_mongodb(
     client: &Client,
@@ -63,11 +63,11 @@ async fn map_locations_to_bson_documents(
 mod tests {
     use super::*;
     use mongodb::bson::doc;
-    use mongodb::{options::ClientOptions, Client};
+    use mongodb::{Client, options::ClientOptions};
     use serde_json::json;
     use std::error::Error;
     use testcontainers::{
-        core::IntoContainerPort, runners::AsyncRunner, ContainerAsync, GenericImage,
+        ContainerAsync, GenericImage, core::IntoContainerPort, runners::AsyncRunner,
     };
 
     // Helper function to get a test MongoDB client using testcontainers

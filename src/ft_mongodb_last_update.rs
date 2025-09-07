@@ -1,6 +1,6 @@
 use mongodb::{
-    bson::{doc, Document},
     Client, Collection,
+    bson::{Document, doc},
 };
 
 const DEFAULT_LAST_UPDATE: &str = "2020-01-01T00:00:00Z";
@@ -51,10 +51,10 @@ async fn get_biggest_update_at_from_profiles(client: &Client) -> String {
 mod tests {
     use super::*;
     use mongodb::bson::doc;
-    use mongodb::{options::ClientOptions, Client};
+    use mongodb::{Client, options::ClientOptions};
     use std::error::Error;
     use testcontainers::{
-        core::IntoContainerPort, runners::AsyncRunner, ContainerAsync, GenericImage,
+        ContainerAsync, GenericImage, core::IntoContainerPort, runners::AsyncRunner,
     };
 
     pub async fn get_test_mongo_client() -> (Client, ContainerAsync<GenericImage>) {

@@ -1,7 +1,7 @@
 use log::{debug, error};
 use oauth2::{
-    basic::BasicClient, reqwest::async_http_client, AccessToken, AuthUrl, ClientId, ClientSecret,
-    TokenResponse, TokenUrl,
+    AccessToken, AuthUrl, ClientId, ClientSecret, TokenResponse, TokenUrl, basic::BasicClient,
+    reqwest::async_http_client,
 };
 use reqwest::header::AUTHORIZATION;
 use std::error::Error;

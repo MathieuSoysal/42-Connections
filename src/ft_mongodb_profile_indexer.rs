@@ -2,8 +2,8 @@ use std::error::Error;
 
 use log::{error, info};
 use mongodb::{
-    bson::{doc, Document},
     Client,
+    bson::{Document, doc},
 };
 
 pub async fn insert_profiles_index_in_mongodb(
@@ -53,10 +53,10 @@ async fn insert_profiles_index_into_mongodb(client: &Client, locations: Vec<Docu
 mod tests {
     use super::*;
     use mongodb::bson::doc;
-    use mongodb::{options::ClientOptions, Client};
+    use mongodb::{Client, options::ClientOptions};
     use serde_json::json;
     use testcontainers::{
-        core::IntoContainerPort, runners::AsyncRunner, ContainerAsync, GenericImage,
+        ContainerAsync, GenericImage, core::IntoContainerPort, runners::AsyncRunner,
     };
 
     // Helper function to get a test MongoDB client using testcontainers

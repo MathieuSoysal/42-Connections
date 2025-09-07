@@ -3,12 +3,11 @@ use std::time::Duration;
 use log::{info, warn};
 use mongodb::Client;
 use oauth2::AccessToken;
-use tokio::time::{sleep_until, Instant};
+use tokio::time::{Instant, sleep_until};
 
 use crate::{
-    fetching_locations, ft_api,
+    NB_FETCH, fetching_locations, ft_api,
     ft_mongodb_profiles::{self, insert_failed_id_in_mongo, insert_ignoring_id_in_mongo},
-    NB_FETCH,
 };
 
 pub const TIME_BETWEEN_REQUESTS: u32 = 3;

@@ -2,8 +2,8 @@ use std::error::Error;
 
 use log::{debug, error, info};
 use mongodb::{
-    bson::{doc, Bson, Document},
     Client, Collection,
+    bson::{Bson, Document, doc},
 };
 
 const DATABASE_NAME: &str = "application";
@@ -122,7 +122,7 @@ fn parse_user_page_doc(doc: Document) -> Result<(i64, i32), Result<(i64, i32), B
         _ => {
             return Err(Err(
                 "Field 'page_number' does not have the expected type".into()
-            ))
+            ));
         }
     };
     Ok((user_id, page_number))
@@ -132,10 +132,10 @@ fn parse_user_page_doc(doc: Document) -> Result<(i64, i32), Result<(i64, i32), B
 mod tests {
     use super::*;
     use mongodb::bson::doc;
-    use mongodb::{options::ClientOptions, Client};
+    use mongodb::{Client, options::ClientOptions};
     use std::error::Error;
     use testcontainers::{
-        core::IntoContainerPort, runners::AsyncRunner, ContainerAsync, GenericImage,
+        ContainerAsync, GenericImage, core::IntoContainerPort, runners::AsyncRunner,
     };
 
     // Helper function to get a test MongoDB client using testcontainers
