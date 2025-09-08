@@ -23,7 +23,7 @@ jobs:
       runs-on: ${{ matrix.os }}
       steps:
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v5
         - name: Install Rust nightly
           uses: dtolnay/rust-toolchain@master
           id: rust-toolchain
@@ -44,7 +44,7 @@ jobs:
       runs-on: ubuntu-latest
       steps:
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v5
         - name: Install Rust nightly
           uses: dtolnay/rust-toolchain@master
           id: rust-toolchain
@@ -67,7 +67,7 @@ jobs:
       needs: [cargo_check]
       runs-on: ubuntu-latest
       steps:
-        - uses: actions/checkout@v4
+        - uses: actions/checkout@v5
         - name: Install Rust nightly
           uses: dtolnay/rust-toolchain@master
           id: rust-toolchain
@@ -92,7 +92,7 @@ jobs:
             os: [ubuntu-latest, windows-latest, macos-latest]
         runs-on: ${{ matrix.os }}
         steps:
-        - uses: actions/checkout@v4
+        - uses: actions/checkout@v5
         - name: Install Rust nightly
           uses: dtolnay/rust-toolchain@master
           id: rust-toolchain
@@ -114,7 +114,7 @@ jobs:
         pull-requests: write
       continue-on-error: true
       steps:
-        - uses: actions/checkout@v4
+        - uses: actions/checkout@v5
         - name: Install Rust nightly
           uses: dtolnay/rust-toolchain@master
           id: rust-toolchain
@@ -139,7 +139,7 @@ jobs:
       needs: [cargo_test]
       runs-on: ubuntu-latest
       steps:
-        - uses: actions/checkout@v4
+        - uses: actions/checkout@v5
         - name: Install Rust nightly
           uses: dtolnay/rust-toolchain@master
           id: rust-toolchain
@@ -169,7 +169,7 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install Rust nightly
         uses: dtolnay/rust-toolchain@master
         id: rust-toolchain
@@ -208,7 +208,7 @@ jobs:
       BENCHER_ADAPTER: rust
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: bencherdev/bencher@main
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
