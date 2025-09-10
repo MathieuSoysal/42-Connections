@@ -70,8 +70,9 @@ pub async fn request_event_participations(
         "Requesting event participations from API for user_id: {}",
         user_id
     );
+    let created_at_range = "2024-11-06T12:04:39.139Z";
     let url = format!(
-        "{}/users/{}/events?page[size]=100&page[number]={}",
+        "{}/users/{}/events?page[size]=100&page[number]={}&range[created_at]={created_at_range},2050-11-06T12:04:39.139Z",
         API_URL, user_id, page_number
     );
     let response = send_http_request(&url, token).await?;

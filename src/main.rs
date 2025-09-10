@@ -6,7 +6,7 @@ use oauth2::AccessToken;
 use std::{env, error::Error, time::Duration};
 use tokio::time::{Instant, sleep_until};
 
-use crate::fetching_new_profiles_ids::fetch_profils_ids_from_42_to_mongo;
+use crate::{fetching_event_participation::double_fetch_events_participation_from_42_to_mongo, fetching_new_profiles_ids::fetch_profils_ids_from_42_to_mongo};
 
 pub mod fetching_event;
 pub mod fetching_event_participation;
@@ -36,7 +36,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     info!("Starting 42 analytics.");
     let (client, api_key_1, api_key_2) = initialize_variables().await?;
-    fetching_profile::fetch_and_update_profiles_from_42_to_mongodb(&client, &api_key_1, &api_key_2).await?;
+
+    // update event participations
+    for _ in 0..NB_FETCH {
+        let start = Instant::now();
+        double_fetch_events_participation_from_42_to_mongo(&client, &api_key_1, &api_key_2).await?;
+        let end = Instant::now();
+        let elapsed = end.duration_since(start);
+        if elapsed < Duration::from_secs(TIME_BETWEEN_REQUESTS as u64) {
+            let wait_duration = Duration::from_secs(TIME_BETWEEN_REQUESTS as u64) - elapsed;
+            debug!("Waiting for {:?} before next fetch.", wait_duration);
+            sleep_until(Instant::now() + wait_duration).await;
+        }
+    }
+
     info!("42 analytics finished.");
     Ok(())
 }
