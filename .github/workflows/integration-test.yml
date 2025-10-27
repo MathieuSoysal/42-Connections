@@ -186,7 +186,7 @@ jobs:
         run: cargo fuzz run fuzz_play_game -- -max_len=4 -max_total_time=180
       - name: upload artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: fuzzing
           path: fuzz/artifacts
